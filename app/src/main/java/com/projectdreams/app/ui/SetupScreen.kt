@@ -50,6 +50,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -70,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import com.projectdreams.app.data.install.InstallManager
 import com.projectdreams.app.ui.theme.AbsoluteSmoothCornerShape
 import com.projectdreams.app.ui.theme.BouncyButton
+import com.projectdreams.app.ui.theme.bouncyPress
 import com.projectdreams.app.ui.theme.BouncyCard
 import com.projectdreams.app.ui.theme.BouncySwitch
 import com.projectdreams.app.ui.theme.BouncyTextButton
@@ -120,8 +123,9 @@ fun SetupScreen(
         else -> true
     }
 
-    Scaffold(
-        bottomBar = {
+    CompositionLocalProvider(LocalOverscrollFactory provides null) {
+        Scaffold(
+            bottomBar = {
             SetupBottomBar(
                 pagerState = pagerState,
                 isNextButtonEnabled = isNextButtonEnabled,
@@ -205,6 +209,7 @@ fun SetupScreen(
                     }
                 }
             }
+        }
         }
     }
 }
