@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Button
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -77,13 +78,16 @@ fun SetupScreen(
         notificationsEnabled = granted
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         Spacer(Modifier.height(24.dp))
         PageDots(pagerState.currentPage, PAGE_COUNT)
         Spacer(Modifier.height(8.dp))
@@ -176,6 +180,8 @@ fun SetupScreen(
         }
     }
 }
+}
+
 
 @Composable
 private fun PageDots(current: Int, count: Int) {
