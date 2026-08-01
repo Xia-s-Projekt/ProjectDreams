@@ -1,49 +1,56 @@
 package com.projectdreams.app.ui
 
 import android.Manifest
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import com.projectdreams.app.ui.theme.AbsoluteSmoothCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Security
-
-import com.projectdreams.app.ui.theme.BouncyButton
-import com.projectdreams.app.ui.theme.BouncyOutlinedButton
-import com.projectdreams.app.ui.theme.BouncyTextButton
-import com.projectdreams.app.ui.theme.BouncyCard
-import com.projectdreams.app.ui.theme.BouncySwitch
-import com.projectdreams.app.ui.theme.SquircleCard
-import androidx.compose.material3.Button
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,17 +58,24 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.animation.core.animateFloat
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.projectdreams.app.data.install.InstallManager
+import com.projectdreams.app.ui.theme.AbsoluteSmoothCornerShape
+import com.projectdreams.app.ui.theme.BouncyButton
+import com.projectdreams.app.ui.theme.BouncyCard
+import com.projectdreams.app.ui.theme.BouncySwitch
+import com.projectdreams.app.ui.theme.BouncyTextButton
+import com.projectdreams.app.ui.theme.AppTypography
 import kotlinx.coroutines.launch
 
-/** Number of pages in the setup wizard. */
 private const val PAGE_COUNT = 4
 
 @Composable
@@ -87,162 +101,258 @@ fun SetupScreen(
         notificationsEnabled = granted
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.surface,
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                    )
-                )
+    val navigateToPage: (Int) -> Unit = { targetPage ->
+        scope.launch {
+            val boundedPage = targetPage.coerceIn(0, PAGE_COUNT - 1)
+            pagerState.animateScrollToPage(boundedPage)
+        }
+    }
+
+    BackHandler {
+        if (pagerState.currentPage > 0) {
+            navigateToPage(pagerState.currentPage - 1)
+        }
+    }
+
+    val isNextButtonEnabled = when (pagerState.currentPage) {
+        1 -> selectedMode != null
+        3 -> disclaimerAccepted
+        else -> true
+    }
+
+    Scaffold(
+        bottomBar = {
+            SetupBottomBar(
+                pagerState = pagerState,
+                isNextButtonEnabled = isNextButtonEnabled,
+                isFinishButtonEnabled = disclaimerAccepted && selectedMode != null,
+                onNextClicked = {
+                    navigateToPage(pagerState.currentPage + 1)
+                },
+                onFinishClicked = {
+                    val mode = selectedMode ?: return@SetupBottomBar
+                    onFinish(mode)
+                }
             )
-    ) {
-        Column(
+        }
+    ) { paddingValues ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-        Spacer(Modifier.height(24.dp))
-        PageDots(pagerState.currentPage, PAGE_COUNT)
-        Spacer(Modifier.height(8.dp))
-
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.weight(1f)
-        ) { page ->
-            // Calculate parallax/scale based on page offset
-            val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-            val absOffset = kotlin.math.abs(pageOffset).coerceIn(0f, 1f)
-            val scale = 1f - (0.15f * absOffset)
-            val alpha = 1f - (0.5f * absOffset)
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        this.alpha = alpha
-                    }
-                    .padding(horizontal = 8.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                when (page) {
-                    0 -> WelcomePage()
-                    1 -> MethodPage(
-                        rootAvailable = rootAvailable,
-                        shizukuAvailable = shizukuAvailable,
-                        selectedMode = selectedMode,
-                        onSelectMode = { selectedMode = it },
-                        onRequestShizuku = onRequestShizuku,
-                        onRecheckRoot = onRecheckRoot
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                        )
                     )
-                    2 -> BackgroundPage(
-                        notificationsEnabled = notificationsEnabled,
-                        deleteAfterInstall = deleteAfterInstall,
-                        onNotificationsChanged = { enabled ->
-                            notificationsEnabled = enabled
-                            if (enabled) {
-                                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                        },
-                        onDeleteAfterInstallChanged = onDeleteAfterInstallChanged
-                    )
-                    3 -> DisclaimerPage(accepted = disclaimerAccepted) { disclaimerAccepted = it }
-                }
-                Spacer(Modifier.height(20.dp))
-            }
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (pagerState.currentPage > 0) {
-                BouncyTextButton(onClick = {
-                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
-                }) {
-                    Text("Back")
-                }
-            }
-            Spacer(Modifier.weight(1f))
-            val lastPage = pagerState.currentPage == PAGE_COUNT - 1
-            val canAdvance = when (pagerState.currentPage) {
-                1 -> selectedMode != null
-                3 -> disclaimerAccepted
-                else -> true
-            }
-            BouncyButton(
-                onClick = {
-                    if (lastPage) {
-                        val mode = selectedMode ?: return@BouncyButton
-                        onFinish(mode)
-                    } else {
-                        scope.launch {
-                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                        }
-                    }
-                },
-                enabled = canAdvance,
-                modifier = Modifier
-                    .fillMaxWidth(0.7f)
-                    .height(52.dp),
-                shape = AbsoluteSmoothCornerShape(24.dp, 60)
-            ) {
-                Text(
-                    text = if (lastPage) "Get started" else "Next",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
                 )
-                if (lastPage) {
-                    Spacer(Modifier.size(8.dp))
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                .padding(paddingValues)
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                userScrollEnabled = false, // Same as PixelPlayer!
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                val absOffset = kotlin.math.abs(pageOffset).coerceIn(0f, 1f)
+                val scale = 1f - (0.15f * absOffset)
+                val alpha = 1f - (0.5f * absOffset)
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            this.alpha = alpha
+                            translationX = size.width * pageOffset
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 24.dp)
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        when (page) {
+                            0 -> WelcomePage()
+                            1 -> MethodPage(
+                                rootAvailable = rootAvailable,
+                                shizukuAvailable = shizukuAvailable,
+                                selectedMode = selectedMode,
+                                onSelectMode = { selectedMode = it },
+                                onRequestShizuku = onRequestShizuku,
+                                onRecheckRoot = onRecheckRoot
+                            )
+                            2 -> BackgroundPage(
+                                notificationsEnabled = notificationsEnabled,
+                                deleteAfterInstall = deleteAfterInstall,
+                                onNotificationsChanged = { enabled ->
+                                    notificationsEnabled = enabled
+                                    if (enabled) {
+                                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                },
+                                onDeleteAfterInstallChanged = onDeleteAfterInstallChanged
+                            )
+                            3 -> DisclaimerPage(accepted = disclaimerAccepted) { disclaimerAccepted = it }
+                        }
+                        Spacer(Modifier.height(100.dp))
+                    }
                 }
             }
         }
     }
 }
-}
-
 
 @Composable
-private fun PageDots(current: Int, count: Int) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        repeat(count) { index ->
-            Box(
+fun SetupBottomBar(
+    modifier: Modifier = Modifier,
+    pagerState: PagerState,
+    onNextClicked: () -> Unit,
+    onFinishClicked: () -> Unit,
+    isNextButtonEnabled: Boolean,
+    isFinishButtonEnabled: Boolean
+) {
+    val morphAnimationSpec = tween<Float>(durationMillis = 600, easing = FastOutSlowInEasing)
+    val rotationAnimationSpec = tween<Float>(durationMillis = 900, easing = FastOutSlowInEasing)
+
+    val targetShapeValues = when (pagerState.currentPage % 3) {
+        0 -> listOf(50f, 50f, 50f, 50f)
+        1 -> listOf(26f, 26f, 26f, 26f)
+        else -> listOf(18f, 50f, 18f, 50f)
+    }
+
+    val animatedTopStart by animateFloatAsState(targetShapeValues[0], morphAnimationSpec, label = "TopStart")
+    val animatedTopEnd by animateFloatAsState(targetShapeValues[1], morphAnimationSpec, label = "TopEnd")
+    val animatedBottomStart by animateFloatAsState(targetShapeValues[2], morphAnimationSpec, label = "BottomStart")
+    val animatedBottomEnd by animateFloatAsState(targetShapeValues[3], morphAnimationSpec, label = "BottomEnd")
+
+    val animatedRotation by animateFloatAsState(
+        targetValue = pagerState.currentPage * 360f,
+        animationSpec = rotationAnimationSpec,
+        label = "Rotation"
+    )
+
+    val shape = AbsoluteSmoothCornerShape(
+        topStart = CornerSize(36.dp),
+        topEnd = CornerSize(36.dp),
+        bottomEnd = CornerSize(0.dp),
+        bottomStart = CornerSize(0.dp),
+        smoothness = 60
+    )
+
+    Surface(
+        modifier = modifier.shadow(elevation = 8.dp, shape = shape, clip = true),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = shape
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)
+        ) {
+            Row(
                 modifier = Modifier
-                    .size(if (index == current) 10.dp else 8.dp)
-                    .clip(AbsoluteSmoothCornerShape(16.dp, 60))
-                    .background(
-                        if (index == current) {
-                            MaterialTheme.colorScheme.primary
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AnimatedContent(
+                    targetState = pagerState.currentPage,
+                    modifier = Modifier.weight(1f).padding(start = 16.dp),
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            (slideInVertically { height -> height } + fadeIn()).togetherWith(slideOutVertically { height -> -height } + fadeOut())
                         } else {
-                            MaterialTheme.colorScheme.surfaceVariant
+                            (slideInVertically { height -> -height } + fadeIn()).togetherWith(slideOutVertically { height -> height } + fadeOut())
+                        }.using(SizeTransform(clip = false))
+                    },
+                    label = "StepTextAnimation"
+                ) { targetPage ->
+                    if (targetPage == 0) {
+                        Text(
+                            text = "Let's go",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    } else {
+                        Text(
+                            text = "Step $targetPage of ${pagerState.pageCount - 1}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                val isLastPage = pagerState.currentPage == pagerState.pageCount - 1
+                val isPrimaryButtonEnabled = if (isLastPage) isFinishButtonEnabled else isNextButtonEnabled
+                val containerColor = if (!isPrimaryButtonEnabled) {
+                    MaterialTheme.colorScheme.surfaceContainerHighest
+                } else {
+                    MaterialTheme.colorScheme.primaryContainer
+                }
+                val contentColor = if (!isPrimaryButtonEnabled) {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.58f)
+                } else {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                }
+
+                androidx.compose.material3.FloatingActionButton(
+                    onClick = if (isLastPage) onFinishClicked else onNextClicked,
+                    shape = AbsoluteSmoothCornerShape(
+                        topStart = CornerSize(animatedTopStart.toInt().dp),
+                        topEnd = CornerSize(animatedTopEnd.toInt().dp),
+                        bottomEnd = CornerSize(animatedBottomEnd.toInt().dp),
+                        bottomStart = CornerSize(animatedBottomStart.toInt().dp),
+                        smoothness = 60
+                    ),
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp),
+                    containerColor = containerColor,
+                    contentColor = contentColor,
+                    modifier = Modifier.rotate(animatedRotation)
+                ) {
+                    AnimatedContent(
+                        modifier = Modifier.rotate(-animatedRotation),
+                        targetState = pagerState.currentPage < pagerState.pageCount - 1,
+                        transitionSpec = {
+                            ContentTransform(
+                                targetContentEnter = fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.9f, animationSpec = tween(220, delayMillis = 90)),
+                                initialContentExit = fadeOut(animationSpec = tween(90)) + scaleOut(targetScale = 0.9f, animationSpec = tween(90))
+                            ).using(SizeTransform(clip = false))
+                        },
+                        label = "AnimatedFabIcon"
+                    ) { isNextPage ->
+                        if (isNextPage) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = "Next")
+                        } else {
+                            if (isFinishButtonEnabled) {
+                                Icon(Icons.Rounded.Check, contentDescription = "Finish")
+                            } else {
+                                Icon(Icons.Rounded.Close, contentDescription = "Close")
+                            }
                         }
-                    )
-            )
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun WelcomePage() {
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(48.dp))
     
-    // Floating animation
     val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
     val floatOffset by infiniteTransition.animateFloat(
         initialValue = -10f,
         targetValue = 10f,
         animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = androidx.compose.animation.core.tween(2000, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            animation = tween<Float>(2000, easing = FastOutSlowInEasing),
             repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
         )
     )
@@ -250,38 +360,38 @@ private fun WelcomePage() {
     Box(
         modifier = Modifier
             .graphicsLayer { translationY = floatOffset }
-            .size(120.dp)
-            .clip(AbsoluteSmoothCornerShape(32.dp, 60))
+            .size(140.dp)
+            .clip(AbsoluteSmoothCornerShape(40.dp, 60))
             .background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             Icons.Filled.Android,
             contentDescription = null,
-            modifier = Modifier.size(64.dp),
+            modifier = Modifier.size(72.dp),
             tint = MaterialTheme.colorScheme.onPrimaryContainer
         )
     }
     
-    Spacer(Modifier.height(32.dp))
+    Spacer(Modifier.height(48.dp))
     Text(
-        text = "Welcome to ProjectDreams",
-        style = MaterialTheme.typography.headlineMedium,
-        fontWeight = FontWeight.Bold,
+        text = "Welcome to",
+        style = AppTypography.displayLarge.copy(fontSize = 42.sp),
         textAlign = TextAlign.Center
     )
-    Spacer(Modifier.height(12.dp))
     Text(
-        text = "Download and update hololive Dreams straight from the Google Play store, " +
-            "without opening the Play Store itself.",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        text = "ProjectDreams",
+        style = AppTypography.displayLarge.copy(
+            fontSize = 46.sp,
+            color = MaterialTheme.colorScheme.primary
+        ),
         textAlign = TextAlign.Center
     )
     Spacer(Modifier.height(24.dp))
     Text(
-        text = "You'll be asked a few quick questions to set things up.",
-        style = MaterialTheme.typography.bodyMedium,
+        text = "Download and update hololive Dreams straight from the Google Play store, without opening the Play Store itself.",
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center
     )
 }
@@ -295,21 +405,20 @@ private fun MethodPage(
     onRequestShizuku: () -> Unit,
     onRecheckRoot: () -> Unit
 ) {
+    Spacer(Modifier.height(32.dp))
+    Text(
+        text = "Installation Method",
+        style = AppTypography.displayMedium.copy(fontSize = 32.sp),
+        textAlign = TextAlign.Center
+    )
     Spacer(Modifier.height(16.dp))
     Text(
-        text = "Choose how apps get installed",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.fillMaxWidth()
-    )
-    Spacer(Modifier.height(4.dp))
-    Text(
-        text = "You can change this later in Settings.",
-        style = MaterialTheme.typography.bodySmall,
+        text = "Choose how apps get installed. You can change this later in Settings.",
+        style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.fillMaxWidth()
+        textAlign = TextAlign.Center
     )
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(32.dp))
 
     SetupMethodCard(
         title = "Root access",
@@ -326,7 +435,7 @@ private fun MethodPage(
             }
         }
     )
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(16.dp))
 
     SetupMethodCard(
         title = "Shizuku",
@@ -349,11 +458,10 @@ private fun MethodPage(
     )
 
     if (selectedMode == InstallManager.Mode.ROOT && !rootAvailable) {
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         Text(
-            text = "Root is not granted to this app yet. Install a root manager and grant " +
-                "access, or pick Shizuku instead.",
-            style = MaterialTheme.typography.bodySmall,
+            text = "Root is not granted to this app yet. Install a root manager and grant access, or pick Shizuku instead.",
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error,
             textAlign = TextAlign.Center
         )
@@ -367,144 +475,129 @@ private fun BackgroundPage(
     onNotificationsChanged: (Boolean) -> Unit,
     onDeleteAfterInstallChanged: (Boolean) -> Unit
 ) {
+    Spacer(Modifier.height(32.dp))
+    Text(
+        text = "Behavior Options",
+        style = AppTypography.displayMedium.copy(fontSize = 32.sp),
+        textAlign = TextAlign.Center
+    )
     Spacer(Modifier.height(16.dp))
     Text(
-        text = "Tune how ProjectDreams behaves",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.fillMaxWidth()
+        text = "Tune how ProjectDreams behaves in the background.",
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center
     )
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(32.dp))
 
     BouncyCard(
         onClick = {},
         shape = AbsoluteSmoothCornerShape(24.dp, 60),
-        colors = CardDefaults.cardColors(
+        colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Filled.Notifications, contentDescription = null)
-            Spacer(Modifier.size(12.dp))
+            Icon(Icons.Filled.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.size(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Be notified about new versions",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
+                    text = "New version alerts",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "ProjectDreams checks the Play Store regularly for updates",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            BouncySwitch(
-                checked = notificationsEnabled,
-                onCheckedChange = onNotificationsChanged
-            )
+            BouncySwitch(checked = notificationsEnabled, onCheckedChange = onNotificationsChanged)
         }
     }
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(16.dp))
 
     BouncyCard(
         onClick = {},
         shape = AbsoluteSmoothCornerShape(24.dp, 60),
-        colors = CardDefaults.cardColors(
+        colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Delete downloads after installing",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
+                    text = "Delete after install",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Frees ~350 MB per install by removing the downloaded APKs",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "Frees ~350 MB per install by removing downloaded APKs",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            BouncySwitch(
-                checked = deleteAfterInstall,
-                onCheckedChange = onDeleteAfterInstallChanged
-            )
+            BouncySwitch(checked = deleteAfterInstall, onCheckedChange = onDeleteAfterInstallChanged)
         }
     }
 
-    Spacer(Modifier.height(16.dp))
-    Text(
-        text = "Stay running in the background",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.fillMaxWidth()
-    )
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(24.dp))
     BackgroundKillerCard()
 }
 
 @Composable
 private fun DisclaimerPage(accepted: Boolean, onAccepted: (Boolean) -> Unit) {
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(32.dp))
     Text(
         text = "One last thing",
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.fillMaxWidth()
+        style = AppTypography.displayMedium.copy(fontSize = 32.sp),
+        textAlign = TextAlign.Center
     )
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(32.dp))
     BouncyCard(
         onClick = {},
         shape = AbsoluteSmoothCornerShape(24.dp, 60),
-        colors = CardDefaults.cardColors(
+        colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(24.dp)) {
             Text(
                 text = "Disclaimer",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
             Text(
-                text = "ProjectDreams is an independent, fan-made downloader and is NOT " +
-                    "affiliated with, endorsed by, or connected to COVER Corp or QualiArts " +
-                    "in any way, shape or form.\n\n" +
-                    "hololive Dreams is 100% owned by COVER Corp and QualiArts, and all " +
-                    "rights to the game and its content belong to them. This project makes " +
-                    "no revenue or profit from it, and hosts no copyrighted content — the " +
-                    "app is downloaded directly from the official Google Play servers.\n\n" +
+                text = "ProjectDreams is an independent, fan-made downloader and is NOT affiliated with, endorsed by, or connected to COVER Corp or QualiArts in any way, shape or form.\n\n" +
+                    "hololive Dreams is 100% owned by COVER Corp and QualiArts, and all rights to the game and its content belong to them. This project makes no revenue or profit from it, and hosts no copyrighted content — the app is downloaded directly from the official Google Play servers.\n\n" +
                     "All trademarks, logos and names are the property of their respective owners.",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(8.dp))
-            BouncySwitch(
-                checked = accepted,
-                onCheckedChange = onAccepted,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                text = "I understand and agree",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
+            Spacer(Modifier.height(24.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BouncySwitch(
+                    checked = accepted,
+                    onCheckedChange = onAccepted
+                )
+                Spacer(Modifier.size(16.dp))
+                Text(
+                    text = "I understand and agree",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -513,7 +606,7 @@ private fun DisclaimerPage(accepted: Boolean, onAccepted: (Boolean) -> Unit) {
 private fun SetupMethodCard(
     title: String,
     subtitle: String,
-    icon: ImageVector,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     available: Boolean,
     selected: Boolean,
     onClick: () -> Unit,
@@ -522,7 +615,7 @@ private fun SetupMethodCard(
     BouncyCard(
         onClick = onClick,
         shape = AbsoluteSmoothCornerShape(24.dp, 60),
-        colors = CardDefaults.cardColors(
+        colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = if (selected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
@@ -532,31 +625,27 @@ private fun SetupMethodCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 icon,
                 contentDescription = null,
-                tint = if (selected) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(32.dp)
             )
-            Spacer(Modifier.size(14.dp))
+            Spacer(Modifier.size(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             trailing()
