@@ -26,6 +26,13 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Security
+
+import com.projectdreams.app.ui.theme.BouncyButton
+import com.projectdreams.app.ui.theme.BouncyOutlinedButton
+import com.projectdreams.app.ui.theme.BouncyTextButton
+import com.projectdreams.app.ui.theme.BouncyCard
+import com.projectdreams.app.ui.theme.BouncySwitch
+import com.projectdreams.app.ui.theme.SquircleCard
 import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Card
@@ -44,8 +51,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -78,9 +87,18 @@ fun SetupScreen(
         notificationsEnabled = granted
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                    )
+                )
+            )
     ) {
         Column(
             modifier = Modifier
@@ -96,9 +114,20 @@ fun SetupScreen(
             state = pagerState,
             modifier = Modifier.weight(1f)
         ) { page ->
+            // Calculate parallax/scale based on page offset
+            val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+            val absOffset = kotlin.math.abs(pageOffset).coerceIn(0f, 1f)
+            val scale = 1f - (0.15f * absOffset)
+            val alpha = 1f - (0.5f * absOffset)
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                        this.alpha = alpha
+                    }
                     .padding(horizontal = 8.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -137,7 +166,7 @@ fun SetupScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (pagerState.currentPage > 0) {
-                TextButton(onClick = {
+                BouncyTextButton(onClick = {
                     scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
                 }) {
                     Text("Back")
@@ -150,10 +179,10 @@ fun SetupScreen(
                 3 -> disclaimerAccepted
                 else -> true
             }
-            Button(
+            BouncyButton(
                 onClick = {
                     if (lastPage) {
-                        val mode = selectedMode ?: return@Button
+                        val mode = selectedMode ?: return@BouncyButton
                         onFinish(mode)
                     } else {
                         scope.launch {
@@ -165,7 +194,7 @@ fun SetupScreen(
                 modifier = Modifier
                     .fillMaxWidth(0.7f)
                     .height(52.dp),
-                shape = RoundedCornerShape(16.dp)
+                shape = AbsoluteSmoothCornerShape(24.dp, 60)
             ) {
                 Text(
                     text = if (lastPage) "Get started" else "Next",
@@ -190,7 +219,7 @@ private fun PageDots(current: Int, count: Int) {
             Box(
                 modifier = Modifier
                     .size(if (index == current) 10.dp else 8.dp)
-                    .clip(CircleShape)
+                    .clip(AbsoluteSmoothCornerShape(16.dp, 60))
                     .background(
                         if (index == current) {
                             MaterialTheme.colorScheme.primary
@@ -207,8 +236,20 @@ private fun PageDots(current: Int, count: Int) {
 private fun WelcomePage() {
     Spacer(Modifier.height(24.dp))
     
+    // Floating animation
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
+    val floatOffset by infiniteTransition.animateFloat(
+        initialValue = -10f,
+        targetValue = 10f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(2000, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        )
+    )
+
     Box(
         modifier = Modifier
+            .graphicsLayer { translationY = floatOffset }
             .size(120.dp)
             .clip(AbsoluteSmoothCornerShape(32.dp, 60))
             .background(MaterialTheme.colorScheme.primaryContainer),
@@ -279,7 +320,7 @@ private fun MethodPage(
         onClick = { onSelectMode(InstallManager.Mode.ROOT) },
         trailing = {
             if (selectedMode == InstallManager.Mode.ROOT && !rootAvailable) {
-                TextButton(onClick = onRecheckRoot) {
+                BouncyTextButton(onClick = onRecheckRoot) {
                     Text("Re-check")
                 }
             }
@@ -300,7 +341,7 @@ private fun MethodPage(
         onClick = { onSelectMode(InstallManager.Mode.SHIZUKU) },
         trailing = {
             if (selectedMode == InstallManager.Mode.SHIZUKU && !shizukuAvailable) {
-                TextButton(onClick = onRequestShizuku) {
+                BouncyTextButton(onClick = onRequestShizuku) {
                     Text("Grant")
                 }
             }
@@ -335,7 +376,9 @@ private fun BackgroundPage(
     )
     Spacer(Modifier.height(12.dp))
 
-    Card(
+    BouncyCard(
+        onClick = {},
+        shape = AbsoluteSmoothCornerShape(24.dp, 60),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
@@ -361,7 +404,7 @@ private fun BackgroundPage(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Switch(
+            BouncySwitch(
                 checked = notificationsEnabled,
                 onCheckedChange = onNotificationsChanged
             )
@@ -370,7 +413,9 @@ private fun BackgroundPage(
 
     Spacer(Modifier.height(12.dp))
 
-    Card(
+    BouncyCard(
+        onClick = {},
+        shape = AbsoluteSmoothCornerShape(24.dp, 60),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
@@ -394,7 +439,7 @@ private fun BackgroundPage(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Switch(
+            BouncySwitch(
                 checked = deleteAfterInstall,
                 onCheckedChange = onDeleteAfterInstallChanged
             )
@@ -422,7 +467,9 @@ private fun DisclaimerPage(accepted: Boolean, onAccepted: (Boolean) -> Unit) {
         modifier = Modifier.fillMaxWidth()
     )
     Spacer(Modifier.height(12.dp))
-    Card(
+    BouncyCard(
+        onClick = {},
+        shape = AbsoluteSmoothCornerShape(24.dp, 60),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
@@ -448,7 +495,7 @@ private fun DisclaimerPage(accepted: Boolean, onAccepted: (Boolean) -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(8.dp))
-            Switch(
+            BouncySwitch(
                 checked = accepted,
                 onCheckedChange = onAccepted,
                 modifier = Modifier.fillMaxWidth()
@@ -472,8 +519,9 @@ private fun SetupMethodCard(
     onClick: () -> Unit,
     trailing: @Composable () -> Unit = {}
 ) {
-    Card(
+    BouncyCard(
         onClick = onClick,
+        shape = AbsoluteSmoothCornerShape(24.dp, 60),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) {
                 MaterialTheme.colorScheme.primaryContainer

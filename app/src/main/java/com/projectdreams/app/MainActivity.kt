@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
         Shizuku.addRequestPermissionResultListener { _, grantResult ->
             if (grantResult == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "Shizuku permission granted", Toast.LENGTH_SHORT).show()
+                viewModel.refreshInstallAvailability()
             } else {
                 Toast.makeText(this, "Shizuku permission denied", Toast.LENGTH_SHORT).show()
             }
@@ -44,5 +45,12 @@ class MainActivity : ComponentActivity() {
         if (intent.getBooleanExtra(DownloadNotifier.EXTRA_RESUME, false)) {
             viewModel.requestResume()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Picks up grants/revocations made in the Shizuku app, or a Shizuku
+        // service that was started after the permission dialog was dismissed.
+        viewModel.refreshInstallAvailability()
     }
 }

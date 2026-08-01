@@ -95,6 +95,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun trackedPackage(): String = app.trackedPackage()
 
+    /** Re-checks root/Shizuku availability (e.g. after granting Shizuku permission). */
+    fun refreshInstallAvailability(forceRootRecheck: Boolean = false) {
+        viewModelScope.launch {
+            app.installManager.refreshAvailability(forceRootRecheck)
+        }
+    }
+
     init {
         if (app.downloadActive.value) {
             val last = app.lastDownloadProgress.value
