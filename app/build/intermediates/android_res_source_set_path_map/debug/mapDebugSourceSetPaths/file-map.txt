@@ -1,0 +1,8 @@
+com.projectdreams.app-pngs-0 /mnt/project/ProjectHolodream/ProjectDreams/app/build/generated/res/pngs/debug
+com.projectdreams.app-updated_navigation_xml-1 /mnt/project/ProjectHolodream/ProjectDreams/app/build/generated/updated_navigation_xml/debug
+com.projectdreams.app-packageDebugResources-2 /mnt/project/ProjectHolodream/ProjectDreams/app/build/intermediates/incremental/debug/packageDebugResources/merged.dir
+com.projectdreams.app-packageDebugResources-3 /mnt/project/ProjectHolodream/ProjectDreams/app/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
+com.projectdreams.app-debug-4 /mnt/project/ProjectHolodream/ProjectDreams/app/build/intermediates/merged_res/debug/mergeDebugResources
+com.projectdreams.app-debug-5 /mnt/project/ProjectHolodream/ProjectDreams/app/src/debug/res
+com.projectdreams.app-main-6 /mnt/project/ProjectHolodream/ProjectDreams/app/src/main/res
+gradleHome-0 /mnt/project/Android/.gradle

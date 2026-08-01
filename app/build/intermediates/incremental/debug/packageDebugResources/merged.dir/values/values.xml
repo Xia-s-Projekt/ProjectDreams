@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#1A1033</color>
+    <string name="app_name">ProjectDreams</string>
+    <string name="tracked_package">game.qualiarts.hololive.dreams.com</string>
+    <style name="Theme.ProjectDreams" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground">@android:color/black</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+</resources>

@@ -1,0 +1,1807 @@
+package com.projectdreams.app.ui
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.consumePositionChange
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
+import coil3.compose.rememberAsyncImagePainter
+import com.aurora.gplayapi.data.models.App
+import com.projectdreams.app.data.Region
+import com.projectdreams.app.data.SettingsRepository
+import com.projectdreams.app.data.install.InstallManager
+import com.projectdreams.app.data.model.ResumeInfo
+import com.projectdreams.app.ui.theme.ProjectDreamsTheme
+import kotlinx.coroutines.delay
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+
+private enum class Screen { Main, Settings, CheckUpdates }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppScreen(
+    viewModel: AppViewModel = viewModel(),
+    resumeDownload: Boolean = false
+) {
+    ProjectDreamsTheme {
+        val onboarded by viewModel.onboarded.collectAsStateWithLifecycle()
+        if (!onboarded) {
+            SetupGate(viewModel)
+            return@ProjectDreamsTheme
+        }
+
+        LaunchedEffect(Unit) {
+            if (resumeDownload) viewModel.requestResume()
+        }
+
+        var screen by remember { mutableStateOf(Screen.Main) }
+        BackHandler(enabled = screen != Screen.Main) {
+            screen = if (screen == Screen.CheckUpdates) Screen.Settings else Screen.Main
+        }
+        when (screen) {
+            Screen.Main -> MainContent(viewModel, onOpenSettings = { screen = Screen.Settings })
+            Screen.Settings -> SettingsScreen(
+                viewModel,
+                onBack = { screen = Screen.Main },
+                onOpenCheckUpdates = { screen = Screen.CheckUpdates }
+            )
+            Screen.CheckUpdates -> CheckUpdatesScreen(
+                viewModel,
+                onBack = { screen = Screen.Settings }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MainContent(viewModel: AppViewModel, onOpenSettings: () -> Unit) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val installState by viewModel.installState.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val region by viewModel.region.collectAsStateWithLifecycle()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("ProjectDreams")
+                        Spacer(Modifier.width(8.dp))
+                        RegionDropdown(region = region, onSelect = viewModel::setRegion)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                ),
+                actions = {
+                    IconButton(onClick = { viewModel.loadApp() }) {
+                        Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
+                    }
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.loadApp() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            when (val state = uiState) {
+                is AppUiState.Loading -> LoadingView()
+                is AppUiState.Error -> ErrorView(state.message) { viewModel.loadApp() }
+                is AppUiState.Ready -> AppDetailView(
+                    state = state,
+                    installState = installState,
+                    viewModel = viewModel
+                )
+            }
+        }
+    }
+}
+
+/** Inline region selector next to the app title; picking one reloads instantly. */
+@Composable
+private fun RegionDropdown(region: Region, onSelect: (Region) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        TextButton(
+            onClick = { expanded = true },
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Text(
+                text = region.label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                Icons.Filled.ArrowDropDown,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            Region.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            option.label,
+                            fontWeight = if (option == region) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    },
+                    leadingIcon = {
+                        if (option == region) {
+                            Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                        }
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelect(option)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SetupGate(viewModel: AppViewModel) {
+    val rootAvailable by viewModel.rootAvailable.collectAsStateWithLifecycle()
+    val shizukuAvailable by viewModel.shizukuAvailable.collectAsStateWithLifecycle()
+    val deleteAfterInstall by viewModel.deleteAfterInstall.collectAsStateWithLifecycle()
+
+    SetupScreen(
+        rootAvailable = rootAvailable,
+        shizukuAvailable = shizukuAvailable,
+        deleteAfterInstall = deleteAfterInstall,
+        onSelectMode = { viewModel.selectInstallMode(it) },
+        onRequestShizuku = viewModel::requestShizukuPermission,
+        onRecheckRoot = { viewModel.refreshPrivilegeStatus(forceRootRecheck = true) },
+        onDeleteAfterInstallChanged = viewModel::setDeleteAfterInstall,
+        onFinish = { viewModel.completeSetup(it) }
+    )
+}
+
+@Composable
+private fun LoadingView() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun ErrorView(message: String, onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            Icons.Filled.Info,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text("Retry")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppDetailView(
+    state: AppUiState.Ready,
+    installState: InstallUiState,
+    viewModel: AppViewModel
+) {
+    val app = state.app
+    var descriptionExpanded by remember { mutableStateOf(false) }
+    var changelogExpanded by remember { mutableStateOf(false) }
+    var showUninstallDialog by remember { mutableStateOf(false) }
+    var showInstallConfirm by remember { mutableStateOf(false) }
+    var fullscreenScreenshot by remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
+
+    val rootAvailable by viewModel.rootAvailable.collectAsStateWithLifecycle()
+    val shizukuAvailable by viewModel.shizukuAvailable.collectAsStateWithLifecycle()
+    val activeMode by viewModel.activeMode.collectAsStateWithLifecycle()
+    val confirmInstallMethod by viewModel.confirmInstallMethod.collectAsStateWithLifecycle()
+    val resumeInfo by viewModel.resumeInfo.collectAsStateWithLifecycle()
+    val fixSourceBusy by viewModel.fixSourceBusy.collectAsStateWithLifecycle()
+
+    val resumeSubtext = resumeInfo?.let { info ->
+        if (!info.hasPartial || info.isComplete) {
+            null
+        } else {
+            buildString {
+                if (info.fileCount > 0) append("${info.doneFiles} of ${info.fileCount} files downloaded")
+                if (info.bytesOnDisk > 0) {
+                    if (isNotEmpty()) append(" · ")
+                    append(viewModel.formatSize(info.bytesOnDisk))
+                }
+            }.ifEmpty { null }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.height(8.dp))
+
+        // App header
+        AsyncImage(
+            model = app.iconArtwork?.url,
+            contentDescription = app.displayName,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .size(112.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = app.displayName,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = app.developerName,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        // Install / Update / Open / Uninstall
+        InstallAction(
+            state = state,
+            installState = installState,
+            resumeInfo = resumeInfo,
+            resumeSubtext = resumeSubtext,
+            viewModel = viewModel,
+            onInstall = {
+                if (confirmInstallMethod) showInstallConfirm = true else viewModel.installOrUpdate()
+            },
+            onOpen = viewModel::openApp,
+            onUninstall = { showUninstallDialog = true },
+            onCancel = viewModel::cancelDownload,
+            onDismissFailure = viewModel::dismissFailure
+        )
+
+        if (state.isInstalled && !state.installedByPlayStore) {
+            Spacer(Modifier.height(12.dp))
+            InstallSourceWarningCard(
+                source = state.installSource,
+                canFix = rootAvailable || shizukuAvailable,
+                busy = fixSourceBusy,
+                error = viewModel.fixSourceError.collectAsStateWithLifecycle().value,
+                onFix = viewModel::fixInstallSource
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        // Meta chips
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MetaChip("v${app.versionName}")
+            MetaChip(viewModel.formatSize(app.size))
+            MetaChip(viewModel.formatDate(app.updatedOn))
+        }
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = viewModel::openPlayStore,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Icon(Icons.Filled.OpenInNew, contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text("View in Play Store")
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        // Changelog
+        if (app.changes.isNotBlank()) {
+            SectionTitle("What's new")
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = formatRichText(app.changes),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = if (changelogExpanded) Int.MAX_VALUE else 4,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (!changelogExpanded) {
+                TextButton(onClick = { changelogExpanded = true }) {
+                    Text("Show more")
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+
+        // Screenshots
+        if (app.screenshots.isNotEmpty()) {
+            SectionTitle("Screenshots")
+            Spacer(Modifier.height(12.dp))
+            val urls = app.screenshots.map { it.url }
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 2.dp)
+            ) {
+                items(urls.size) { index ->
+                    AsyncImage(
+                        model = urls[index],
+                        contentDescription = "Screenshot ${index + 1}",
+                        contentScale = ContentScale.FillHeight,
+                        modifier = Modifier
+                            .height(260.dp)
+                            .width(120.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { fullscreenScreenshot = urls to index }
+                    )
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+
+        // Description
+        if (app.description.isNotBlank()) {
+            SectionTitle("About this app")
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = formatRichText(app.description),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = if (descriptionExpanded) Int.MAX_VALUE else 6,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (!descriptionExpanded) {
+                TextButton(onClick = { descriptionExpanded = true }) {
+                    Text("Show more")
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+
+        Spacer(Modifier.height(24.dp))
+        Text(
+            text = "Xia Projekt",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(24.dp))
+    }
+
+    if (showUninstallDialog) {
+        AlertDialog(
+            onDismissRequest = { showUninstallDialog = false },
+            title = { Text("Uninstall hololive Dreams?") },
+            text = { Text("The app will be removed from this device.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showUninstallDialog = false
+                    viewModel.uninstall()
+                }) {
+                    Text("Uninstall", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUninstallDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showInstallConfirm) {
+        InstallMethodConfirmDialog(
+            rootAvailable = rootAvailable,
+            shizukuAvailable = shizukuAvailable,
+            activeMode = activeMode,
+            onSelectMode = viewModel::selectInstallMode,
+            onDontAskAgain = viewModel::setConfirmInstallMethod,
+            onInstall = {
+                showInstallConfirm = false
+                viewModel.installOrUpdate()
+            },
+            onDismiss = { showInstallConfirm = false }
+        )
+    }
+
+    fullscreenScreenshot?.let { (urls, index) ->
+        FullscreenScreenshotsDialog(
+            urls = urls,
+            initialIndex = index,
+            onDismiss = { fullscreenScreenshot = null }
+        )
+    }
+}
+
+/** Asks which install method to use, with an optional "don't ask again". */
+/** Full-screen failure dialog with reason, expandable logs, retry, and copy. */
+@Composable
+private fun InstallFailedDialog(
+    state: InstallUiState.Failed,
+    onDismiss: () -> Unit,
+    onRetry: () -> Unit
+) {
+    var showLogs by remember { mutableStateOf(false) }
+    val clipboard = LocalClipboardManager.current
+
+    AlertDialog(
+        onDismissRequest = {},
+        icon = {
+            Icon(
+                Icons.Filled.Info,
+                contentDescription = null,
+                tint = if (state.isNetworkError) {
+                    Color(0xFFFBC02D)
+                } else {
+                    MaterialTheme.colorScheme.error
+                }
+            )
+        },
+        title = {
+            Text(if (state.isNetworkError) "No Internet Connection" else "Download failed!")
+        },
+        text = {
+            Column {
+                if (state.isNetworkError) {
+                    Text(
+                        text = "Check your internet connection and try again.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "Don't worry — your download is saved and will " +
+                            "continue from where it left off, not from 0.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        text = "But it's not your fault!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "Failed reason:",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = state.message,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { showLogs = !showLogs }) {
+                        Text(if (showLogs) "Hide logs" else "Show logs")
+                    }
+                    TextButton(onClick = {
+                        clipboard.setText(AnnotatedString("${state.message}\n\n${state.logs}"))
+                    }) {
+                        Text("Copy logs")
+                    }
+                }
+                if (showLogs) {
+                    Text(
+                        text = state.logs,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = FontFamily.Monospace
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(8.dp)
+                            .verticalScroll(rememberScrollState())
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text("Close", color = MaterialTheme.colorScheme.error)
+                }
+                TextButton(onClick = onRetry) {
+                    Text("Retry", color = Color(0xFF81C784))
+                }
+            }
+        },
+        dismissButton = {}
+    )
+}
+
+@Composable
+private fun InstallMethodConfirmDialog(
+    rootAvailable: Boolean,
+    shizukuAvailable: Boolean,
+    activeMode: InstallManager.Mode,
+    onSelectMode: (InstallManager.Mode) -> Unit,
+    onDontAskAgain: (Boolean) -> Unit,
+    onInstall: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var dontAskAgain by remember { mutableStateOf(false) }
+    var pendingMode by remember { mutableStateOf(activeMode) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Installation method") },
+        text = {
+            Column {
+                Text(
+                    text = "Install hololive Dreams via:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(12.dp))
+                MethodRadioRow(
+                    label = "Root",
+                    available = rootAvailable,
+                    selected = pendingMode == InstallManager.Mode.ROOT,
+                    onClick = {
+                        pendingMode = InstallManager.Mode.ROOT
+                        onSelectMode(InstallManager.Mode.ROOT)
+                    }
+                )
+                MethodRadioRow(
+                    label = "Shizuku",
+                    available = shizukuAvailable,
+                    selected = pendingMode == InstallManager.Mode.SHIZUKU,
+                    onClick = {
+                        pendingMode = InstallManager.Mode.SHIZUKU
+                        onSelectMode(InstallManager.Mode.SHIZUKU)
+                    }
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = dontAskAgain,
+                        onCheckedChange = { dontAskAgain = it }
+                    )
+                    Text(
+                        text = "Don't ask again",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onDontAskAgain(dontAskAgain)
+                onInstall()
+            }) {
+                Text("Install")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun MethodRadioRow(
+    label: String,
+    available: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = if (available) "Granted" else "Not granted",
+            style = MaterialTheme.typography.labelMedium,
+            color = if (available) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.error
+            }
+        )
+    }
+}
+
+/** Fullscreen screenshot viewer: swipe left/right, pinch-zoom, tap or X to close. */
+@Composable
+private fun FullscreenScreenshotsDialog(
+    urls: List<String>,
+    initialIndex: Int,
+    onDismiss: () -> Unit
+) {
+    val pagerState = rememberPagerState(
+        initialPage = initialIndex.coerceIn(0, urls.size - 1),
+        pageCount = { urls.size }
+    )
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                ZoomableScreenshot(url = urls[page], onTap = onDismiss)
+            }
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 16.dp)
+            ) {
+                Text(
+                    text = "${pagerState.currentPage + 1}/${urls.size}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
+            ) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Close",
+                    tint = Color.White
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ZoomableScreenshot(url: String, onTap: () -> Unit) {
+    var scale by remember(url) { mutableStateOf(1f) }
+    var offset by remember(url) { mutableStateOf(Offset.Zero) }
+    val zoomed = scale > 1f
+    val currentZoomed by rememberUpdatedState(zoomed)
+
+    val painter = rememberAsyncImagePainter(model = url)
+    var imageBox by remember(url) { mutableStateOf(IntSize.Zero) }
+    val intrinsic = painter.intrinsicSize
+    val fitSize = if (intrinsic.isSpecified && imageBox != IntSize.Zero) {
+        val s = min(imageBox.width / intrinsic.width, imageBox.height / intrinsic.height)
+        Size(intrinsic.width * s, intrinsic.height * s)
+    } else {
+        Size(imageBox.width.toFloat(), imageBox.height.toFloat())
+    }
+    val maxPanX = max(0f, (fitSize.width * scale - imageBox.width) / 2f)
+    val maxPanY = max(0f, (fitSize.height * scale - imageBox.height) / 2f)
+
+    fun clampOffset(x: Float, y: Float) =
+        Offset(x.coerceIn(-maxPanX, maxPanX), y.coerceIn(-maxPanY, maxPanY))
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp)
+            .onSizeChanged { imageBox = it }
+            .pointerInput(url) {
+                detectTapGestures(
+                    onTap = { if (!currentZoomed) onTap() },
+                    onDoubleTap = {
+                        scale = if (scale > 1f) 1f else 2.5f
+                        offset = Offset.Zero
+                    }
+                )
+            }
+    ) {
+        Image(
+            painter = painter,
+            contentDescription = "Screenshot",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(zoomed) {
+                    // When zoomed, pan with bounds so the image can never slide
+                    // off into blank canvas, and hand horizontal drags at the
+                    // edges over to the pager so swiping pages to the next
+                    // screenshot instead of consuming them.
+                    if (!zoomed) return@pointerInput
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        do {
+                            val event = awaitPointerEvent()
+                            val changes = event.changes
+                            val zoomChange = event.calculateZoom()
+                            var consume = false
+                            if (zoomChange != 1f && changes.size >= 2) {
+                                val centroid = event.calculateCentroid()
+                                val center = Offset(
+                                    imageBox.width / 2f,
+                                    imageBox.height / 2f
+                                )
+                                val newScale = (scale * zoomChange).coerceIn(1f, 6f)
+                                offset = clampOffset(
+                                    centroid.x - center.x -
+                                        (centroid.x - center.x - offset.x) * (newScale / scale),
+                                    centroid.y - center.y -
+                                        (centroid.y - center.y - offset.y) * (newScale / scale)
+                                )
+                                if (newScale == 1f) offset = Offset.Zero
+                                scale = newScale
+                                consume = true
+                            } else if (changes.size == 1) {
+                                val pan = changes.first().positionChange()
+                                val newOffset = clampOffset(offset.x + pan.x, offset.y + pan.y)
+                                val pinnedAtXBound =
+                                    newOffset.x == offset.x && abs(pan.x) > 0f
+                                // Pure horizontal drag against the horizontal edge:
+                                // let the pager take it so the view pages over.
+                                if (pinnedAtXBound && abs(pan.x) >= abs(pan.y)) {
+                                    consume = false
+                                } else {
+                                    consume = newOffset != offset
+                                    offset = newOffset
+                                }
+                            }
+                            if (consume) {
+                                changes.forEach { if (it.positionChanged()) it.consumePositionChange() }
+                            }
+                        } while (changes.any { it.pressed })
+                    }
+                }
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationX = offset.x
+                    translationY = offset.y
+                }
+        )
+    }
+}
+
+/** Converts Play Store HTML (br tags, entities) into plain, readable text. */
+private fun formatRichText(raw: String): String {
+    var text = raw
+        .replace(Regex("(?i)<br\\s*/?>"), "\n")
+        .replace(Regex("(?i)</p>"), "\n\n")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&nbsp;", " ")
+        .replace("&hellip;", "…")
+        .replace("&mdash;", "—")
+        .replace("&ndash;", "–")
+        .replace("&ldquo;", "\"")
+        .replace("&rdquo;", "\"")
+        .replace("&amp;", "&")
+        .replace(Regex("<[^>]*>"), "")
+        .replace(Regex("\\n{3,}"), "\n\n")
+        .trim()
+    return text
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+@Composable
+private fun MetaChip(text: String) {
+    AssistChip(onClick = {}, label = { Text(text) })
+}
+
+@Composable
+private fun InstallSourceWarningCard(
+    source: String?,
+    canFix: Boolean,
+    busy: Boolean,
+    error: String?,
+    onFix: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.tertiary
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Not installed from Play Store",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Installed by ${source ?: "an unknown source"}. Some apps check their " +
+                    "installer and may show warnings or refuse to run. Fixing reuses the " +
+                    "already-downloaded files — no re-download.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = onFix,
+                enabled = canFix && !busy,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                if (busy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Fixing…")
+                } else {
+                    Text("Fix install source")
+                }
+            }
+            if (!canFix) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Requires root or Shizuku permission to fix.",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (error != null) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InstallAction(
+    state: AppUiState.Ready,
+    installState: InstallUiState,
+    resumeInfo: ResumeInfo?,
+    resumeSubtext: String?,
+    viewModel: AppViewModel,
+    onInstall: () -> Unit,
+    onOpen: () -> Unit,
+    onUninstall: () -> Unit,
+    onCancel: () -> Unit,
+    onDismissFailure: () -> Unit
+) {
+    when (installState) {
+        is InstallUiState.Idle -> {
+            val canResume = resumeInfo != null && resumeInfo.hasPartial &&
+                !resumeInfo.isComplete && !state.isUpToDate
+            if (state.isUpToDate) {
+                Button(
+                    onClick = onOpen,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Filled.OpenInNew, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Open", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                }
+            } else {
+                Button(
+                    onClick = onInstall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    if (canResume) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Continue", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    } else {
+                        Icon(Icons.Filled.Download, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (state.isInstalled) "Update" else "Install",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                if (canResume && resumeSubtext != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = resumeSubtext,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else if (state.isInstalled) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "Installed version ${state.installedVersionName}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (state.isInstalled) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onUninstall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Filled.Delete, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Uninstall")
+                }
+            }
+        }
+
+        is InstallUiState.Preparing -> {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(12.dp))
+                Text("Preparing…")
+            }
+        }
+
+        is InstallUiState.Downloading -> {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                LinearProgressIndicator(
+                    progress = { installState.progress.coerceIn(0f, 1f) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = installState.status ?: "Downloading…",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (installState.detail.bytesPerSecond > 0f) {
+                            Spacer(Modifier.height(2.dp))
+                            val eta = installState.detail.etaSeconds
+                                ?.let { viewModel.formatEta(it) }
+                            Text(
+                                text = if (eta != null) {
+                                    "${viewModel.formatSpeed(installState.detail.bytesPerSecond)} · $eta"
+                                } else {
+                                    viewModel.formatSpeed(installState.detail.bytesPerSecond)
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Text(
+                        text = "${(installState.progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    TextButton(onClick = onCancel) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        }
+
+        is InstallUiState.Installing,
+        is InstallUiState.Done -> {
+            val finishing = installState is InstallUiState.Done
+            val justInstalled = (installState as? InstallUiState.Done)?.justInstalled == true
+
+            // One shared Animatable so the bar and layout persist seamlessly across the
+            // Installing → Done transition: it ramps 0→90% while `pm install` runs, then
+            // smoothly ramps 90→100% as the install finishes, holds briefly at 100%,
+            // and only then swaps to the Open/Uninstall buttons.
+            val progress = remember { Animatable(0f) }
+            var showButtons by remember { mutableStateOf(false) }
+
+            LaunchedEffect(installState) {
+                when {
+                    justInstalled -> {
+                        progress.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing)
+                        )
+                        delay(250)
+                        showButtons = true
+                    }
+                    finishing -> {
+                        progress.snapTo(1f)
+                        showButtons = true
+                    }
+                }
+            }
+            if (!finishing) {
+                LaunchedEffect(Unit) {
+                    progress.animateTo(
+                        targetValue = 0.9f,
+                        animationSpec = tween(durationMillis = 1400, easing = FastOutSlowInEasing)
+                    )
+                }
+            }
+
+            if (showButtons) {
+                if (state.isInstalled) {
+                    Button(
+                        onClick = onOpen,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Filled.OpenInNew, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Installed — Open", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onUninstall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(Icons.Filled.Delete, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Uninstall")
+                    }
+                } else {
+                    Button(
+                        onClick = onInstall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Filled.Download, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Install",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            } else {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    LinearProgressIndicator(
+                        progress = { progress.value },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Installing…",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "${(progress.value * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+        }
+
+        is InstallUiState.Failed -> InstallFailedDialog(
+            installState,
+            onDismiss = onDismissFailure,
+            onRetry = {
+                onDismissFailure()
+                onInstall()
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsScreen(
+    viewModel: AppViewModel,
+    onBack: () -> Unit,
+    onOpenCheckUpdates: () -> Unit
+) {
+    val rootAvailable by viewModel.rootAvailable.collectAsStateWithLifecycle()
+    val shizukuAvailable by viewModel.shizukuAvailable.collectAsStateWithLifecycle()
+    val activeMode by viewModel.activeMode.collectAsStateWithLifecycle()
+    val deleteAfterInstall by viewModel.deleteAfterInstall.collectAsStateWithLifecycle()
+    var showClearDownloadsDialog by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(padding),
+        ) {
+            SectionTitle("Installation method")
+            Spacer(Modifier.height(8.dp))
+            InstallMethodCard(
+                rootAvailable = rootAvailable,
+                shizukuAvailable = shizukuAvailable,
+                activeMode = activeMode,
+                onSelectRoot = {
+                    viewModel.selectInstallMode(InstallManager.Mode.ROOT)
+                    viewModel.refreshPrivilegeStatus(forceRootRecheck = true)
+                },
+                onSelectShizuku = {
+                    viewModel.selectInstallMode(InstallManager.Mode.SHIZUKU)
+                    viewModel.refreshPrivilegeStatus()
+                },
+                onRequestShizuku = viewModel::requestShizukuPermission,
+                onRecheckRoot = { viewModel.refreshPrivilegeStatus(forceRootRecheck = true) }
+            )
+
+            Spacer(Modifier.height(24.dp))
+            SectionTitle("Updates")
+            Spacer(Modifier.height(8.dp))
+            Card(
+                onClick = onOpenCheckUpdates,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.Refresh, contentDescription = null)
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Check for updates",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Interval, notifications, auto update",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+            SectionTitle("Storage")
+            Spacer(Modifier.height(8.dp))
+            SettingsSwitchRow(
+                title = "Delete downloads after installing",
+                subtitle = "Frees ~350 MB per install by removing the downloaded APKs",
+                checked = deleteAfterInstall,
+                onCheckedChange = viewModel::setDeleteAfterInstall
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { showClearDownloadsDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.Delete, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("Clear downloaded files")
+            }
+
+            Spacer(Modifier.height(24.dp))
+            SectionTitle("Background")
+            Spacer(Modifier.height(8.dp))
+            BackgroundKillerCard()
+
+            Spacer(Modifier.height(24.dp))
+            Divider()
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Disclaimer",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "ProjectDreams is an independent, fan-made downloader. It is not " +
+                    "affiliated with, endorsed by, or connected to COVER Corp or QualiArts " +
+                    "in any way. hololive Dreams is owned by COVER Corp and QualiArts, and " +
+                    "this project makes no revenue from it. All trademarks belong to their " +
+                    "respective owners.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(24.dp))
+            Text(
+                text = "Xia Projekt",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+
+    if (showClearDownloadsDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDownloadsDialog = false },
+            title = { Text("Clear downloaded files?") },
+            text = { Text("Removes any previously downloaded APKs from storage.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showClearDownloadsDialog = false
+                    viewModel.clearDownloads()
+                }) {
+                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDownloadsDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun SettingsSwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun InstallMethodCard(
+    rootAvailable: Boolean,
+    shizukuAvailable: Boolean,
+    activeMode: InstallManager.Mode,
+    onSelectRoot: () -> Unit,
+    onSelectShizuku: () -> Unit,
+    onRequestShizuku: () -> Unit,
+    onRecheckRoot: () -> Unit = {}
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Install method",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Installs via `pm -i com.android.vending` to simulate Play Store",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MethodChip(
+                    label = "Root",
+                    available = rootAvailable,
+                    selected = activeMode == InstallManager.Mode.ROOT,
+                    onClick = onSelectRoot
+                )
+                MethodChip(
+                    label = "Shizuku",
+                    available = shizukuAvailable,
+                    selected = activeMode == InstallManager.Mode.SHIZUKU,
+                    onClick = onSelectShizuku
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = when {
+                    activeMode == InstallManager.Mode.ROOT && !rootAvailable ->
+                        "Root is not granted to this app. Grant it in your root manager."
+                    activeMode == InstallManager.Mode.SHIZUKU && !shizukuAvailable ->
+                        "Shizuku is not granted."
+                    else -> " "
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+            if (activeMode == InstallManager.Mode.SHIZUKU && !shizukuAvailable) {
+                TextButton(onClick = onRequestShizuku) {
+                    Text("Grant Shizuku access")
+                }
+            }
+            if (activeMode == InstallManager.Mode.ROOT && !rootAvailable) {
+                TextButton(onClick = onRecheckRoot) {
+                    Text("Re-check root access")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MethodChip(
+    label: String,
+    available: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val colors = when {
+        selected && available -> ButtonDefaults.filledTonalButtonColors()
+        selected && !available -> ButtonDefaults.outlinedButtonColors()
+        else -> ButtonDefaults.outlinedButtonColors()
+    }
+    OutlinedButton(
+        onClick = onClick,
+        enabled = true,
+        colors = colors,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(label, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+            Text(
+                text = if (available) "Granted" else "Not granted",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (available) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.error
+                }
+            )
+        }
+    }
+}
+
+/** Configures how (and how often) the app checks Play for updates. */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
+    val updateNotifications by viewModel.updateNotifications.collectAsStateWithLifecycle()
+    val autoUpdate by viewModel.autoUpdate.collectAsStateWithLifecycle()
+    val updateIntervalHours by viewModel.updateIntervalHours.collectAsStateWithLifecycle()
+
+    var editOpen by remember { mutableStateOf(false) }
+    var editText by remember { mutableStateOf("") }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Check for updates") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(padding),
+        ) {
+            SectionTitle("How often to check")
+            Spacer(Modifier.height(8.dp))
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "ProjectDreams checks the Play Store in the background " +
+                            formatEveryHours(updateIntervalHours) +
+                            " for new versions of the selected region build.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        PRESET_INTERVALS.forEach { (hours, label) ->
+                            FilterChip(
+                                selected = updateIntervalHours == hours,
+                                onClick = { viewModel.setUpdateIntervalHours(hours) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Custom",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            FilledTonalIconButton(
+                                onClick = {
+                                    viewModel.setUpdateIntervalHours(updateIntervalHours - 1)
+                                },
+                                enabled = updateIntervalHours > 1
+                            ) {
+                                Icon(Icons.Filled.Remove, contentDescription = "Less often check")
+                            }
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        editText = updateIntervalHours.toString()
+                                        editOpen = true
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "$updateIntervalHours",
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                                Text(
+                                    text = "hours",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            FilledTonalIconButton(
+                                onClick = {
+                                    viewModel.setUpdateIntervalHours(updateIntervalHours + 1)
+                                },
+                                enabled = updateIntervalHours < SettingsRepository.MAX_INTERVAL_HOURS
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = "More often check")
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+            SectionTitle("When an update is found")
+            Spacer(Modifier.height(8.dp))
+            SettingsSwitchRow(
+                title = "Update notifications",
+                subtitle = "Be notified when a new version is available",
+                checked = updateNotifications,
+                onCheckedChange = viewModel::setUpdateNotifications
+            )
+            SettingsSwitchRow(
+                title = "Auto update",
+                subtitle = "Download and install updates automatically (needs root or Shizuku)",
+                checked = autoUpdate,
+                onCheckedChange = viewModel::setAutoUpdate
+            )
+
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = viewModel::checkNow,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Filled.Refresh, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Check now")
+            }
+
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+
+    if (editOpen) {
+        AlertDialog(
+            onDismissRequest = { editOpen = false },
+            title = { Text("Check every") },
+            text = {
+                OutlinedTextField(
+                    value = editText,
+                    onValueChange = { input ->
+                        editText = input.filter { it.isDigit() }.take(3)
+                    },
+                    label = { Text("Hours (1 – ${SettingsRepository.MAX_INTERVAL_HOURS})") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val hours = editText.toLongOrNull()
+                        ?.coerceIn(
+                            SettingsRepository.MIN_INTERVAL_HOURS,
+                            SettingsRepository.MAX_INTERVAL_HOURS
+                        )
+                    if (hours != null && hours != updateIntervalHours) {
+                        viewModel.setUpdateIntervalHours(hours)
+                    }
+                    editOpen = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editOpen = false }) { Text("Cancel") }
+            }
+        )
+    }
+}
+
+/** "every hour" / "every day" / "every N days" / "every N hours" phrasing for a duration. */
+private fun formatEveryHours(hours: Long): String = when (hours) {
+    1L -> "every hour"
+    else -> {
+        val days = hours / 24
+        val remainder = hours % 24
+        when {
+            remainder == 0L && days == 1L -> "every day"
+            remainder == 0L -> "every $days days"
+            else -> "every $hours hours"
+        }
+    }
+}
+
+private val PRESET_INTERVALS = listOf(
+    1L to "1 hour",
+    3L to "3 hours",
+    6L to "6 hours",
+    12L to "12 hours",
+    24L to "Every day",
+    168L to "Every week",
+    720L to "Every month"
+)
