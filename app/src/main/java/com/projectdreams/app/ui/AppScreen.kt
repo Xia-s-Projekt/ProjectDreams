@@ -594,7 +594,7 @@ private fun InstallFailedDialog(
                 Icons.Filled.Info,
                 contentDescription = null,
                 tint = if (state.isNetworkError) {
-                    Color(0xFFFBC02D)
+                    MaterialTheme.colorScheme.tertiary
                 } else {
                     MaterialTheme.colorScheme.error
                 }
@@ -674,7 +674,7 @@ private fun InstallFailedDialog(
                     Text("Close", color = MaterialTheme.colorScheme.error)
                 }
                 BouncyTextButton(onClick = onRetry) {
-                    Text("Retry", color = Color(0xFF81C784))
+                    Text("Retry", color = MaterialTheme.colorScheme.primary)
                 }
             }
         },
@@ -805,7 +805,7 @@ private fun FullscreenScreenshotsDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             HorizontalPager(
                 state = pagerState,
@@ -821,10 +821,10 @@ private fun FullscreenScreenshotsDialog(
                 Text(
                     text = "${pagerState.currentPage + 1}/${urls.size}",
                     style = MaterialTheme.typography.labelLarge,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .clip(AbsoluteSmoothCornerShape(20.dp, 60))
-                        .background(Color.Black.copy(alpha = 0.5f))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 )
             }
@@ -837,7 +837,7 @@ private fun FullscreenScreenshotsDialog(
                 Icon(
                     Icons.Filled.Close,
                     contentDescription = "Close",
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
