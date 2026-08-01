@@ -1,5 +1,8 @@
 package com.projectdreams.app.ui
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import com.projectdreams.app.ui.theme.BouncyButton
 import com.projectdreams.app.ui.theme.BouncyCard
@@ -209,6 +212,7 @@ private fun MainContent(viewModel: AppViewModel, onOpenSettings: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(16.dp)
         ) {
             when (val state = uiState) {
                 is AppUiState.Loading -> LoadingView()
@@ -376,7 +380,7 @@ private fun AppDetailView(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(8.dp))
@@ -1623,6 +1627,12 @@ private fun MethodChip(
 private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
     val updateNotifications by viewModel.updateNotifications.collectAsStateWithLifecycle()
     val autoUpdate by viewModel.autoUpdate.collectAsStateWithLifecycle()
+    
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        // the state is already updated if they toggle, or we can just ensure they gave permission.
+    }
     val updateIntervalHours by viewModel.updateIntervalHours.collectAsStateWithLifecycle()
 
     var editOpen by remember { mutableStateOf(false) }
@@ -1740,7 +1750,12 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
                 title = "Update notifications",
                 subtitle = "Be notified when a new version is available",
                 checked = updateNotifications,
-                onCheckedChange = viewModel::setUpdateNotifications
+                onCheckedChange = { enabled ->
+                    if (enabled) {
+                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    viewModel.setUpdateNotifications(enabled)
+                }
             )
             SettingsSwitchRow(
                 title = "Auto update",

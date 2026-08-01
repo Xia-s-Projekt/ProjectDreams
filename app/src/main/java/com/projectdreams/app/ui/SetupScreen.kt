@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import com.projectdreams.app.ui.theme.AbsoluteSmoothCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -79,7 +80,7 @@ fun SetupScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp),
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(24.dp))
@@ -93,6 +94,7 @@ fun SetupScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(horizontal = 8.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -197,6 +199,23 @@ private fun PageDots(current: Int, count: Int) {
 @Composable
 private fun WelcomePage() {
     Spacer(Modifier.height(24.dp))
+    
+    Box(
+        modifier = Modifier
+            .size(120.dp)
+            .clip(AbsoluteSmoothCornerShape(32.dp, 60))
+            .background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.Filled.Android,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    }
+    
+    Spacer(Modifier.height(32.dp))
     Text(
         text = "Welcome to ProjectDreams",
         style = MaterialTheme.typography.headlineMedium,
