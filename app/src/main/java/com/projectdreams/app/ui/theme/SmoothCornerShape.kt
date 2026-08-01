@@ -62,21 +62,35 @@ private fun smoothRoundedRectPath(
     cornerRadius: Float,
     smoothness: Int
 ): Path {
+    val halfSize = min(width, height) / 2f
     if (cornerRadius <= 0f || smoothness <= 0) {
         return Path().apply {
             addRoundRect(
                 androidx.compose.ui.geometry.RoundRect(
                     left = 0f, top = 0f, right = width, bottom = height,
-                    radiusX = cornerRadius.coerceAtLeast(0f),
-                    radiusY = cornerRadius.coerceAtLeast(0f)
+                    radiusX = cornerRadius.coerceIn(0f, halfSize),
+                    radiusY = cornerRadius.coerceIn(0f, halfSize)
                 )
             )
         }
     }
 
-    val r = cornerRadius
+    val r = cornerRadius.coerceIn(0f, halfSize)
+    if (r >= halfSize * 0.9f) {
+        // Fallback to standard pill shape to avoid sharp knife-edge pinching
+        return Path().apply {
+            addRoundRect(
+                androidx.compose.ui.geometry.RoundRect(
+                    left = 0f, top = 0f, right = width, bottom = height,
+                    radiusX = halfSize,
+                    radiusY = halfSize
+                )
+            )
+        }
+    }
+
     val smooth = (smoothness.coerceIn(0, 100) / 100f)
-    val p = r * smooth * 1.2f
+    val p = (r * smooth * 1.2f).coerceAtMost(halfSize - r)
 
     return Path().apply {
         moveTo(0f, r + p)

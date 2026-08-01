@@ -30,7 +30,7 @@ class SettingsRepository(context: Context) {
     val installMode: StateFlow<Mode> = _installMode.asStateFlow()
 
     private val _updateNotifications = MutableStateFlow(
-        prefs.getBoolean(KEY_UPDATE_NOTIFICATIONS, true)
+        prefs.getBoolean(KEY_UPDATE_NOTIFICATIONS, false)
     )
     val updateNotifications: StateFlow<Boolean> = _updateNotifications.asStateFlow()
 
