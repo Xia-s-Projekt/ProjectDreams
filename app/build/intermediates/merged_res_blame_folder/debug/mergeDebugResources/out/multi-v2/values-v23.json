@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.projectdreams.app-mergeDebugResources-48:/values-v23/values-v23.xml",
+            "outputFile": "com.projectdreams.app-mergeDebugResources-49:/values-v23/values-v23.xml",
             "map": [
                 {
                     "source": "/mnt/project/Android/.gradle/caches/9.5.0/transforms/dddb18da93276e5b69f3532fd36f128a/transformed/work-runtime-2.10.1/res/values-v23/values-v23.xml",

@@ -1,6 +1,18 @@
 package com.projectdreams.app.ui
 
 import androidx.activity.compose.BackHandler
+import com.projectdreams.app.ui.theme.BouncyButton
+import com.projectdreams.app.ui.theme.BouncyCard
+import com.projectdreams.app.ui.theme.BouncyIconButton
+import com.projectdreams.app.ui.theme.BouncyOutlinedButton
+import com.projectdreams.app.ui.theme.BouncySwitch
+import com.projectdreams.app.ui.theme.BouncyTextButton
+import com.projectdreams.app.ui.theme.SquircleCard
+import com.projectdreams.app.ui.theme.WavyProgressIndicator
+import com.projectdreams.app.ui.theme.bouncyPress
+import com.projectdreams.app.ui.theme.AbsoluteSmoothCornerShape
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,7 +39,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -55,8 +66,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
@@ -184,10 +193,10 @@ private fun MainContent(viewModel: AppViewModel, onOpenSettings: () -> Unit) {
                     containerColor = Color.Transparent
                 ),
                 actions = {
-                    IconButton(onClick = { viewModel.loadApp() }) {
+                    BouncyIconButton(onClick = { viewModel.loadApp() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                     }
-                    IconButton(onClick = onOpenSettings) {
+                    BouncyIconButton(onClick = onOpenSettings) {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
                 }
@@ -215,14 +224,15 @@ private fun MainContent(viewModel: AppViewModel, onOpenSettings: () -> Unit) {
 }
 
 /** Inline region selector next to the app title; picking one reloads instantly. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RegionDropdown(region: Region, onSelect: (Region) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        TextButton(
+        BouncyTextButton(
             onClick = { expanded = true },
             modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
+                .clip(AbsoluteSmoothCornerShape(12.dp, 60))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Text(
@@ -237,28 +247,38 @@ private fun RegionDropdown(region: Region, onSelect: (Region) -> Unit) {
                 modifier = Modifier.size(18.dp)
             )
         }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            Region.entries.forEach { option ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            option.label,
-                            fontWeight = if (option == region) FontWeight.SemiBold else FontWeight.Normal
-                        )
-                    },
-                    leadingIcon = {
-                        if (option == region) {
-                            Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+        if (expanded) {
+            ModalBottomSheet(
+                onDismissRequest = { expanded = false },
+                sheetState = rememberModalBottomSheetState(),
+                shape = AbsoluteSmoothCornerShape(32.dp, 60)
+            ) {
+                androidx.compose.foundation.layout.Column(Modifier.padding(bottom = 24.dp)) {
+                    Region.entries.forEach { option ->
+                        androidx.compose.foundation.layout.Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    expanded = false
+                                    onSelect(option)
+                                }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (option == region) {
+                                Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(24.dp))
+                                Spacer(Modifier.width(16.dp))
+                            } else {
+                                Spacer(Modifier.width(40.dp))
+                            }
+                            Text(
+                                option.label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (option == region) FontWeight.SemiBold else FontWeight.Normal
+                            )
                         }
-                    },
-                    onClick = {
-                        expanded = false
-                        onSelect(option)
                     }
-                )
+                }
             }
         }
     }
@@ -311,7 +331,7 @@ private fun ErrorView(message: String, onRetry: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(16.dp))
-        Button(onClick = onRetry) {
+        BouncyButton(onClick = onRetry) {
             Text("Retry")
         }
     }
@@ -368,7 +388,7 @@ private fun AppDetailView(
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .size(112.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(AbsoluteSmoothCornerShape(24.dp, 60))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         )
         Spacer(Modifier.height(16.dp))
@@ -404,7 +424,7 @@ private fun AppDetailView(
 
         if (state.isInstalled && !state.installedByPlayStore) {
             Spacer(Modifier.height(12.dp))
-            InstallSourceWarningCard(
+            InstallSourceWarningSquircleCard(
                 source = state.installSource,
                 canFix = rootAvailable || shizukuAvailable,
                 busy = fixSourceBusy,
@@ -422,12 +442,12 @@ private fun AppDetailView(
             MetaChip(viewModel.formatDate(app.updatedOn))
         }
         Spacer(Modifier.height(12.dp))
-        OutlinedButton(
+        BouncyOutlinedButton(
             onClick = viewModel::openPlayStore,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(44.dp),
-            shape = RoundedCornerShape(14.dp)
+            shape = AbsoluteSmoothCornerShape(14.dp, 60)
         ) {
             Icon(Icons.Filled.OpenInNew, contentDescription = null)
             Spacer(Modifier.width(6.dp))
@@ -447,7 +467,7 @@ private fun AppDetailView(
                 overflow = TextOverflow.Ellipsis
             )
             if (!changelogExpanded) {
-                TextButton(onClick = { changelogExpanded = true }) {
+                BouncyTextButton(onClick = { changelogExpanded = true }) {
                     Text("Show more")
                 }
             }
@@ -471,7 +491,7 @@ private fun AppDetailView(
                         modifier = Modifier
                             .height(260.dp)
                             .width(120.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(AbsoluteSmoothCornerShape(16.dp, 60))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { fullscreenScreenshot = urls to index }
                     )
@@ -491,7 +511,7 @@ private fun AppDetailView(
                 overflow = TextOverflow.Ellipsis
             )
             if (!descriptionExpanded) {
-                TextButton(onClick = { descriptionExpanded = true }) {
+                BouncyTextButton(onClick = { descriptionExpanded = true }) {
                     Text("Show more")
                 }
             }
@@ -513,7 +533,7 @@ private fun AppDetailView(
             title = { Text("Uninstall hololive Dreams?") },
             text = { Text("The app will be removed from this device.") },
             confirmButton = {
-                TextButton(onClick = {
+                BouncyTextButton(onClick = {
                     showUninstallDialog = false
                     viewModel.uninstall()
                 }) {
@@ -521,7 +541,7 @@ private fun AppDetailView(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showUninstallDialog = false }) {
+                BouncyTextButton(onClick = { showUninstallDialog = false }) {
                     Text("Cancel")
                 }
             }
@@ -613,10 +633,10 @@ private fun InstallFailedDialog(
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { showLogs = !showLogs }) {
+                    BouncyTextButton(onClick = { showLogs = !showLogs }) {
                         Text(if (showLogs) "Hide logs" else "Show logs")
                     }
-                    TextButton(onClick = {
+                    BouncyTextButton(onClick = {
                         clipboard.setText(AnnotatedString("${state.message}\n\n${state.logs}"))
                     }) {
                         Text("Copy logs")
@@ -632,7 +652,7 @@ private fun InstallFailedDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(160.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(AbsoluteSmoothCornerShape(8.dp, 60))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .padding(8.dp)
                             .verticalScroll(rememberScrollState())
@@ -646,10 +666,10 @@ private fun InstallFailedDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onDismiss) {
+                BouncyTextButton(onClick = onDismiss) {
                     Text("Close", color = MaterialTheme.colorScheme.error)
                 }
-                TextButton(onClick = onRetry) {
+                BouncyTextButton(onClick = onRetry) {
                     Text("Retry", color = Color(0xFF81C784))
                 }
             }
@@ -700,7 +720,7 @@ private fun InstallMethodConfirmDialog(
                     }
                 )
                 Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.bouncyPress()) {
                     Checkbox(
                         checked = dontAskAgain,
                         onCheckedChange = { dontAskAgain = it }
@@ -713,7 +733,7 @@ private fun InstallMethodConfirmDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
+            BouncyTextButton(onClick = {
                 onDontAskAgain(dontAskAgain)
                 onInstall()
             }) {
@@ -721,7 +741,7 @@ private fun InstallMethodConfirmDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            BouncyTextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
         }
@@ -738,6 +758,7 @@ private fun MethodRadioRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .bouncyPress()
             .clickable(onClick = onClick)
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -798,12 +819,12 @@ private fun FullscreenScreenshotsDialog(
                     style = MaterialTheme.typography.labelLarge,
                     color = Color.White,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(AbsoluteSmoothCornerShape(20.dp, 60))
                         .background(Color.Black.copy(alpha = 0.5f))
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 )
             }
-            IconButton(
+            BouncyIconButton(
                 onClick = onDismiss,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -960,14 +981,14 @@ private fun MetaChip(text: String) {
 }
 
 @Composable
-private fun InstallSourceWarningCard(
+private fun InstallSourceWarningSquircleCard(
     source: String?,
     canFix: Boolean,
     busy: Boolean,
     error: String?,
     onFix: () -> Unit
 ) {
-    Card(
+    SquircleCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
         ),
@@ -996,13 +1017,13 @@ private fun InstallSourceWarningCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(12.dp))
-            Button(
+            BouncyButton(
                 onClick = onFix,
                 enabled = canFix && !busy,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp),
-                shape = RoundedCornerShape(14.dp)
+                shape = AbsoluteSmoothCornerShape(14.dp, 60)
             ) {
                 if (busy) {
                     CircularProgressIndicator(
@@ -1053,24 +1074,24 @@ private fun InstallAction(
             val canResume = resumeInfo != null && resumeInfo.hasPartial &&
                 !resumeInfo.isComplete && !state.isUpToDate
             if (state.isUpToDate) {
-                Button(
+                BouncyButton(
                     onClick = onOpen,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = AbsoluteSmoothCornerShape(16.dp, 60)
                 ) {
                     Icon(Icons.Filled.OpenInNew, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Open", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
             } else {
-                Button(
+                BouncyButton(
                     onClick = onInstall,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = AbsoluteSmoothCornerShape(16.dp, 60)
                 ) {
                     if (canResume) {
                         Icon(Icons.Filled.PlayArrow, contentDescription = null)
@@ -1104,12 +1125,12 @@ private fun InstallAction(
             }
             if (state.isInstalled) {
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(
+                BouncyOutlinedButton(
                     onClick = onUninstall,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = AbsoluteSmoothCornerShape(14.dp, 60),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )
@@ -1137,12 +1158,11 @@ private fun InstallAction(
 
         is InstallUiState.Downloading -> {
             Column(modifier = Modifier.fillMaxWidth()) {
-                LinearProgressIndicator(
+                WavyProgressIndicator(
                     progress = { installState.progress.coerceIn(0f, 1f) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .height(12.dp)
                 )
                 Spacer(Modifier.height(10.dp))
                 Row(
@@ -1175,7 +1195,7 @@ private fun InstallAction(
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
-                    TextButton(onClick = onCancel) {
+                    BouncyTextButton(onClick = onCancel) {
                         Text("Cancel")
                     }
                 }
@@ -1221,24 +1241,24 @@ private fun InstallAction(
 
             if (showButtons) {
                 if (state.isInstalled) {
-                    Button(
+                    BouncyButton(
                         onClick = onOpen,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = AbsoluteSmoothCornerShape(16.dp, 60)
                     ) {
                         Icon(Icons.Filled.OpenInNew, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text("Installed — Open", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     }
                     Spacer(Modifier.height(8.dp))
-                    OutlinedButton(
+                    BouncyOutlinedButton(
                         onClick = onUninstall,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(44.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = AbsoluteSmoothCornerShape(14.dp, 60),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
                         )
@@ -1248,12 +1268,12 @@ private fun InstallAction(
                         Text("Uninstall")
                     }
                 } else {
-                    Button(
+                    BouncyButton(
                         onClick = onInstall,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = AbsoluteSmoothCornerShape(16.dp, 60)
                     ) {
                         Icon(Icons.Filled.Download, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
@@ -1266,12 +1286,11 @@ private fun InstallAction(
                 }
             } else {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    LinearProgressIndicator(
+                    WavyProgressIndicator(
                         progress = { progress.value },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .height(12.dp)
                     )
                     Spacer(Modifier.height(10.dp))
                     Row(
@@ -1323,7 +1342,7 @@ private fun SettingsScreen(
             TopAppBar(
                 title = { Text("Settings") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    BouncyIconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -1342,7 +1361,7 @@ private fun SettingsScreen(
         ) {
             SectionTitle("Installation method")
             Spacer(Modifier.height(8.dp))
-            InstallMethodCard(
+            InstallMethodSquircleCard(
                 rootAvailable = rootAvailable,
                 shizukuAvailable = shizukuAvailable,
                 activeMode = activeMode,
@@ -1361,7 +1380,7 @@ private fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
             SectionTitle("Updates")
             Spacer(Modifier.height(8.dp))
-            Card(
+            BouncyCard(
                 onClick = onOpenCheckUpdates,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -1405,7 +1424,7 @@ private fun SettingsScreen(
                 onCheckedChange = viewModel::setDeleteAfterInstall
             )
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(
+            BouncyOutlinedButton(
                 onClick = { showClearDownloadsDialog = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -1455,7 +1474,7 @@ private fun SettingsScreen(
             title = { Text("Clear downloaded files?") },
             text = { Text("Removes any previously downloaded APKs from storage.") },
             confirmButton = {
-                TextButton(onClick = {
+                BouncyTextButton(onClick = {
                     showClearDownloadsDialog = false
                     viewModel.clearDownloads()
                 }) {
@@ -1463,7 +1482,7 @@ private fun SettingsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDownloadsDialog = false }) {
+                BouncyTextButton(onClick = { showClearDownloadsDialog = false }) {
                     Text("Cancel")
                 }
             }
@@ -1492,12 +1511,12 @@ private fun SettingsSwitchRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        BouncySwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
 @Composable
-private fun InstallMethodCard(
+private fun InstallMethodSquircleCard(
     rootAvailable: Boolean,
     shizukuAvailable: Boolean,
     activeMode: InstallManager.Mode,
@@ -1506,7 +1525,7 @@ private fun InstallMethodCard(
     onRequestShizuku: () -> Unit,
     onRecheckRoot: () -> Unit = {}
 ) {
-    Card(
+    SquircleCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
@@ -1552,12 +1571,12 @@ private fun InstallMethodCard(
                 color = MaterialTheme.colorScheme.error
             )
             if (activeMode == InstallManager.Mode.SHIZUKU && !shizukuAvailable) {
-                TextButton(onClick = onRequestShizuku) {
+                BouncyTextButton(onClick = onRequestShizuku) {
                     Text("Grant Shizuku access")
                 }
             }
             if (activeMode == InstallManager.Mode.ROOT && !rootAvailable) {
-                TextButton(onClick = onRecheckRoot) {
+                BouncyTextButton(onClick = onRecheckRoot) {
                     Text("Re-check root access")
                 }
             }
@@ -1577,11 +1596,11 @@ private fun MethodChip(
         selected && !available -> ButtonDefaults.outlinedButtonColors()
         else -> ButtonDefaults.outlinedButtonColors()
     }
-    OutlinedButton(
+    BouncyOutlinedButton(
         onClick = onClick,
         enabled = true,
         colors = colors,
-        shape = RoundedCornerShape(12.dp)
+        shape = AbsoluteSmoothCornerShape(12.dp, 60)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(label, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
@@ -1614,7 +1633,7 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
             TopAppBar(
                 title = { Text("Check for updates") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    BouncyIconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -1633,7 +1652,7 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
         ) {
             SectionTitle("How often to check")
             Spacer(Modifier.height(8.dp))
-            Card(
+            SquircleCard(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 ),
@@ -1684,7 +1703,7 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(AbsoluteSmoothCornerShape(10.dp, 60))
                                     .clickable {
                                         editText = updateIntervalHours.toString()
                                         editOpen = true
@@ -1731,12 +1750,12 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
             )
 
             Spacer(Modifier.height(24.dp))
-            Button(
+            BouncyButton(
                 onClick = viewModel::checkNow,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                shape = RoundedCornerShape(14.dp)
+                shape = AbsoluteSmoothCornerShape(14.dp, 60)
             ) {
                 Icon(Icons.Filled.Refresh, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
@@ -1763,7 +1782,7 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                BouncyTextButton(onClick = {
                     val hours = editText.toLongOrNull()
                         ?.coerceIn(
                             SettingsRepository.MIN_INTERVAL_HOURS,
@@ -1776,7 +1795,7 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
                 }) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { editOpen = false }) { Text("Cancel") }
+                BouncyTextButton(onClick = { editOpen = false }) { Text("Cancel") }
             }
         )
     }

@@ -14,6 +14,7 @@ dependencyResolutionManagement {
         maven("https://jitpack.io/") {
             content {
                 includeModule("com.github.topjohnwu.libsu", "core")
+                includeGroup("com.github.racra")
             }
         }
     }

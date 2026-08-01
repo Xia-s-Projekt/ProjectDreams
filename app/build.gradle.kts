@@ -16,7 +16,8 @@ kotlin {
     compilerOptions {
         optIn.addAll(
             "androidx.compose.material3.ExperimentalMaterial3Api",
-            "coil3.annotation.ExperimentalCoilApi"
+            "coil3.annotation.ExperimentalCoilApi",
+            "androidx.compose.foundation.ExperimentalFoundationApi"
         )
     }
 }
@@ -80,6 +81,9 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation("androidx.compose.material:material-icons-extended")
     debugImplementation(libs.androidx.ui.tooling)
+
+    // Google Fonts
+    implementation("androidx.compose.ui:ui-text-google-fonts")
 
     // Coil
     implementation(libs.coil.compose)
