@@ -512,7 +512,10 @@ private fun AppDetailView(
         Spacer(Modifier.height(20.dp))
 
         // Meta chips
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+        ) {
             MetaChip("v${app.versionName}")
             MetaChip(viewModel.formatSize(app.size))
             MetaChip(viewModel.formatDate(app.updatedOn))
