@@ -7,6 +7,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.ScrollState
 import com.projectdreams.app.ui.theme.BouncyButton
 import com.projectdreams.app.ui.theme.BouncyCard
 import com.projectdreams.app.ui.theme.BouncyIconButton
@@ -215,10 +217,34 @@ private fun MainContent(viewModel: AppViewModel) {
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val region by viewModel.region.collectAsStateWithLifecycle()
 
+    val scrollState = rememberScrollState()
+    val showAppTitle by remember { derivedStateOf { scrollState.value > 250 } }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ProjectDreams") },
+                title = { 
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = showAppTitle && uiState is AppUiState.Ready,
+                        label = "AppTitle"
+                    ) { showApp ->
+                        if (showApp) {
+                            val app = (uiState as AppUiState.Ready).app
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                AsyncImage(
+                                    model = app.iconArtwork?.url,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.size(32.dp).clip(AbsoluteSmoothCornerShape(8.dp, 60)).background(MaterialTheme.colorScheme.surfaceVariant)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(app.displayName, fontWeight = FontWeight.SemiBold)
+                            }
+                        } else {
+                            Text("ProjectDreams", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                },
                 actions = {
                     RegionDropdown(region = region, onSelect = viewModel::setRegion)
                 },
@@ -234,7 +260,6 @@ private fun MainContent(viewModel: AppViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
         ) {
             when (val state = uiState) {
                 is AppUiState.Loading -> LoadingView()
@@ -242,7 +267,8 @@ private fun MainContent(viewModel: AppViewModel) {
                 is AppUiState.Ready -> AppDetailView(
                     state = state,
                     installState = installState,
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    scrollState = scrollState
                 )
             }
         }
@@ -368,7 +394,8 @@ private fun ErrorView(message: String, onRetry: () -> Unit) {
 private fun AppDetailView(
     state: AppUiState.Ready,
     installState: InstallUiState,
-    viewModel: AppViewModel
+    viewModel: AppViewModel,
+    scrollState: ScrollState
 ) {
     val app = state.app
     var descriptionExpanded by remember { mutableStateOf(false) }
@@ -401,7 +428,7 @@ private fun AppDetailView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.Start
     ) {

@@ -4,4 +4,5 @@ cd "$(dirname "$0")"
 
 ./gradlew :app:assembleDebug -q
 adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n com.projectdreams.app/.MainActivity
 echo "Deployed"
