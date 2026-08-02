@@ -95,6 +95,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -189,7 +190,6 @@ fun AppScreen(
                 Screen.Main -> MainContent(viewModel)
                 Screen.Settings -> SettingsScreen(
                     viewModel,
-                    onBack = { screen = Screen.Main },
                     onOpenCheckUpdates = { screen = Screen.CheckUpdates }
                 )
                 Screen.CheckUpdates -> CheckUpdatesScreen(
@@ -1809,7 +1809,6 @@ private fun InstallMethodPreference(
 @Composable
 private fun SettingsScreen(
     viewModel: AppViewModel,
-    onBack: () -> Unit,
     onOpenCheckUpdates: () -> Unit
 ) {
     val rootAvailable by viewModel.rootAvailable.collectAsStateWithLifecycle()
@@ -1818,17 +1817,17 @@ private fun SettingsScreen(
     val deleteAfterInstall by viewModel.deleteAfterInstall.collectAsStateWithLifecycle()
     var showClearDownloadsDialog by remember { mutableStateOf(false) }
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            LargeTopAppBar(
                 title = { Text("Settings", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    BouncyIconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
                 )
             )
         }
@@ -2014,17 +2013,22 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
     var editOpen by remember { mutableStateOf(false) }
     var editText by remember { mutableStateOf("") }
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text("Check for updates") },
+            LargeTopAppBar(
+                title = { Text("Check for updates", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     BouncyIconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
                 )
             )
         }
