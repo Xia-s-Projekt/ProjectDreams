@@ -1,4 +1,5 @@
 package com.projectdreams.app.ui
+import androidx.compose.ui.unit.em
 
 import android.Manifest
 import androidx.activity.compose.BackHandler
@@ -41,6 +42,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.rounded.Check
@@ -183,9 +185,9 @@ fun SetupScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 24.dp)
-                            .verticalScroll(rememberScrollState()),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .padding(horizontal = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         when (page) {
                             0 -> WelcomePage()
@@ -359,55 +361,76 @@ fun SetupBottomBar(
 
 @Composable
 private fun WelcomePage() {
-    Spacer(Modifier.height(48.dp))
-    
-    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
-    val floatOffset by infiniteTransition.animateFloat(
-        initialValue = -10f,
-        targetValue = 10f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = tween<Float>(2000, easing = FastOutSlowInEasing),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-        )
-    )
-
-    Box(
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
-            .graphicsLayer { translationY = floatOffset }
-            .size(140.dp)
-            .clip(AbsoluteSmoothCornerShape(40.dp, 60))
-            .background(MaterialTheme.colorScheme.primaryContainer),
-        contentAlignment = Alignment.Center
+            .fillMaxSize()
+            .padding(vertical = 16.dp)
     ) {
-        Icon(
-            Icons.Filled.Android,
-            contentDescription = null,
-            modifier = Modifier.size(72.dp),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .padding(top = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = "Welcome to",
+                style = AppTypography.displayLarge.copy(
+                    fontSize = 42.sp,
+                    lineHeight = 1.1.em
+                )
+            )
+            Text(
+                text = "Project Dreams",
+                style = AppTypography.displayLarge.copy(
+                    fontSize = 46.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    lineHeight = 1.1.em
+                )
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(10.dp))
+        
+        val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
+        val floatOffset by infiniteTransition.animateFloat(
+            initialValue = -10f,
+            targetValue = 10f,
+            animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                animation = androidx.compose.animation.core.tween(2000, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+            )
+        )
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(240.dp)
+                .clip(AbsoluteSmoothCornerShape(20.dp, 60))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.MusicNote,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(100.dp)
+                    .graphicsLayer { translationY = floatOffset },
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = "Everyone's favorite rhythm game.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
         )
     }
-    
-    Spacer(Modifier.height(48.dp))
-    Text(
-        text = "Welcome to",
-        style = AppTypography.displayLarge.copy(fontSize = 42.sp),
-        textAlign = TextAlign.Center
-    )
-    Text(
-        text = "ProjectDreams",
-        style = AppTypography.displayLarge.copy(
-            fontSize = 46.sp,
-            color = MaterialTheme.colorScheme.primary
-        ),
-        textAlign = TextAlign.Center
-    )
-    Spacer(Modifier.height(24.dp))
-    Text(
-        text = "Download and update hololive Dreams straight from the Google Play store, without opening the Play Store itself.",
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center
-    )
 }
 
 @Composable
