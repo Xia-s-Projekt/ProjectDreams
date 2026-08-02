@@ -2029,9 +2029,6 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
     }
     val updateIntervalHours by viewModel.updateIntervalHours.collectAsStateWithLifecycle()
 
-    var editOpen by remember { mutableStateOf(false) }
-    var editText by remember { mutableStateOf("") }
-
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val hazeState = remember { HazeState() }
 
@@ -2076,86 +2073,10 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
         ) {
             SectionTitle("How often to check")
             Spacer(Modifier.height(8.dp))
-            SquircleCard(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "ProjectDreams checks the Play Store in the background " +
-                            formatEveryHours(updateIntervalHours) +
-                            " for new versions of the selected region build.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        PRESET_INTERVALS.forEach { (hours, label) ->
-                            FilterChip(
-                                selected = updateIntervalHours == hours,
-                                onClick = { viewModel.setUpdateIntervalHours(hours) },
-                                label = { Text(label) }
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Spacer(Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Custom",
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            FilledTonalIconButton(
-                                onClick = {
-                                    viewModel.setUpdateIntervalHours(updateIntervalHours - 1)
-                                },
-                                enabled = updateIntervalHours > 1
-                            ) {
-                                Icon(Icons.Filled.Remove, contentDescription = "Less often check")
-                            }
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .clip(AbsoluteSmoothCornerShape(10.dp, 60))
-                                    .clickable {
-                                        editText = updateIntervalHours.toString()
-                                        editOpen = true
-                                    }
-                                    .padding(horizontal = 12.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "$updateIntervalHours",
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-                                Text(
-                                    text = "hours",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            FilledTonalIconButton(
-                                onClick = {
-                                    viewModel.setUpdateIntervalHours(updateIntervalHours + 1)
-                                },
-                                enabled = updateIntervalHours < SettingsRepository.MAX_INTERVAL_HOURS
-                            ) {
-                                Icon(Icons.Filled.Add, contentDescription = "More often check")
-                            }
-                        }
-                    }
-                }
-            }
+            IntervalDropdownPreference(
+                currentHours = updateIntervalHours,
+                onSelect = { viewModel.setUpdateIntervalHours(it) }
+            )
 
             Spacer(Modifier.height(24.dp))
             SectionTitle("When an update is found")
@@ -2197,39 +2118,7 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
         }
     }
 
-    if (editOpen) {
-        AlertDialog(
-            onDismissRequest = { editOpen = false },
-            title = { Text("Check every") },
-            text = {
-                OutlinedTextField(
-                    value = editText,
-                    onValueChange = { input ->
-                        editText = input.filter { it.isDigit() }.take(3)
-                    },
-                    label = { Text("Hours (1 – ${SettingsRepository.MAX_INTERVAL_HOURS})") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                BouncyTextButton(onClick = {
-                    val hours = editText.toLongOrNull()
-                        ?.coerceIn(
-                            SettingsRepository.MIN_INTERVAL_HOURS,
-                            SettingsRepository.MAX_INTERVAL_HOURS
-                        )
-                    if (hours != null && hours != updateIntervalHours) {
-                        viewModel.setUpdateIntervalHours(hours)
-                    }
-                    editOpen = false
-                }) { Text("OK") }
-            },
-            dismissButton = {
-                BouncyTextButton(onClick = { editOpen = false }) { Text("Cancel") }
-            }
-        )
-    }
+
 }
 
 /** "every hour" / "every day" / "every N days" / "every N hours" phrasing for a duration. */
@@ -2242,6 +2131,70 @@ private fun formatEveryHours(hours: Long): String = when (hours) {
             remainder == 0L && days == 1L -> "every day"
             remainder == 0L -> "every $days days"
             else -> "every $hours hours"
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun IntervalDropdownPreference(
+    currentHours: Long,
+    onSelect: (Long) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    
+    val currentLabel = PRESET_INTERVALS.find { it.first == currentHours }?.second ?: "$currentHours hours"
+
+    PreferenceRow(
+        title = "Check Frequency",
+        subtitle = "How often the app checks for new updates",
+        icon = Icons.Filled.Refresh,
+        iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
+        iconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        action = {
+            androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(currentLabel, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            }
+        },
+        onClick = { expanded = true }
+    )
+
+    if (expanded) {
+        ModalBottomSheet(
+            onDismissRequest = { expanded = false },
+            sheetState = rememberModalBottomSheetState(),
+            shape = AbsoluteSmoothCornerShape(32.dp, 60)
+        ) {
+            androidx.compose.foundation.layout.Column(Modifier.padding(bottom = 24.dp)) {
+                PRESET_INTERVALS.forEach { (hours, label) ->
+                    androidx.compose.foundation.layout.Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                expanded = false
+                                onSelect(hours)
+                            }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (hours == currentHours) {
+                            Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(16.dp))
+                        } else {
+                            Spacer(Modifier.width(40.dp))
+                        }
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (hours == currentHours) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (hours == currentHours) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
         }
     }
 }
