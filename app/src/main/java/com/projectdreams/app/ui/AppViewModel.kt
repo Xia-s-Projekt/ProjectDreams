@@ -109,7 +109,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val region = app.settingsRepository.region
     val allGames = app.settingsRepository.gamesList
     val game = app.settingsRepository.game
-
+    var gameToEdit: com.projectdreams.app.data.Game? = null
     fun setGame(game: com.projectdreams.app.data.Game) {
         if (_isRefreshing.value) {
             android.widget.Toast.makeText(app, "Please wait while the app is loading", android.widget.Toast.LENGTH_SHORT).show()

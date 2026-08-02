@@ -87,6 +87,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -444,6 +446,10 @@ private fun LoadingView() {
 
 @Composable
 private fun ErrorView(message: String, onRetry: () -> Unit) {
+    val isOffline = message.contains("Unable to resolve host", ignoreCase = true) || message.contains("No address associated", ignoreCase = true)
+    val displayMessage = if (isOffline) "No internet connection. Please check your network and try again." else message
+    val icon = if (isOffline) Icons.Filled.WifiOff else Icons.Filled.Info
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -452,16 +458,17 @@ private fun ErrorView(message: String, onRetry: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
-            Icons.Filled.Info,
+            icon,
             contentDescription = null,
             modifier = Modifier.size(48.dp),
             tint = MaterialTheme.colorScheme.error
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            text = message,
+            text = displayMessage,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
         Spacer(Modifier.height(16.dp))
         BouncyButton(onClick = onRetry) {
@@ -2564,7 +2571,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 shape = AbsoluteSmoothCornerShape(16.dp, 60),
-                modifier = Modifier.padding(bottom = 80.dp)
+                modifier = Modifier.padding(end = 16.dp, bottom = 80.dp)
             ) {
                 Icon(androidx.compose.material.icons.Icons.Filled.Add, contentDescription = "Add Game")
             }
@@ -2706,8 +2713,17 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                         },
                                         modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.primaryContainer)
                                     ) {
-                                        Icon(androidx.compose.material.icons.Icons.Filled.Add, contentDescription = "Install", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                                        Icon(androidx.compose.material.icons.Icons.Filled.Download, contentDescription = "Install", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
                                     }
+                                }
+                                BouncyIconButton(
+                                    onClick = { 
+                                        viewModel.gameToEdit = game
+                                        onNavigate(Screen.AddGame) 
+                                    },
+                                    modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.secondaryContainer)
+                                ) {
+                                    Icon(androidx.compose.material.icons.Icons.Filled.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(20.dp))
                                 }
                                 BouncyIconButton(
                                     onClick = { gameToRemove = game },
