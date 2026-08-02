@@ -22,6 +22,7 @@ import com.projectdreams.app.ui.theme.AbsoluteSmoothCornerShape
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.foundation.Image
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -190,16 +191,34 @@ fun AppScreen(
         }
         
         Box(modifier = Modifier.fillMaxSize().nestedScroll(nestedScrollConnection)) {
-            when (screen) {
-                Screen.Main -> MainContent(viewModel)
-                Screen.Settings -> SettingsScreen(
-                    viewModel,
-                    onOpenCheckUpdates = { screen = Screen.CheckUpdates }
-                )
-                Screen.CheckUpdates -> CheckUpdatesScreen(
-                    viewModel,
-                    onBack = { screen = Screen.Settings }
-                )
+            androidx.compose.animation.AnimatedContent(
+                targetState = screen,
+                label = "ScreenTransition",
+                transitionSpec = {
+                    if (targetState == Screen.CheckUpdates && initialState == Screen.Settings) {
+                        (androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }) + androidx.compose.animation.fadeIn()).togetherWith(
+                            androidx.compose.animation.slideOutHorizontally(targetOffsetX = { -it / 2 }) + androidx.compose.animation.fadeOut()
+                        )
+                    } else if (targetState == Screen.Settings && initialState == Screen.CheckUpdates) {
+                        (androidx.compose.animation.slideInHorizontally(initialOffsetX = { -it / 2 }) + androidx.compose.animation.fadeIn()).togetherWith(
+                            androidx.compose.animation.slideOutHorizontally(targetOffsetX = { it }) + androidx.compose.animation.fadeOut()
+                        )
+                    } else {
+                        androidx.compose.animation.fadeIn().togetherWith(androidx.compose.animation.fadeOut())
+                    }
+                }
+            ) { targetScreen ->
+                when (targetScreen) {
+                    Screen.Main -> MainContent(viewModel)
+                    Screen.Settings -> SettingsScreen(
+                        viewModel,
+                        onOpenCheckUpdates = { screen = Screen.CheckUpdates }
+                    )
+                    Screen.CheckUpdates -> CheckUpdatesScreen(
+                        viewModel,
+                        onBack = { screen = Screen.Settings }
+                    )
+                }
             }
             
             androidx.compose.animation.AnimatedVisibility(
