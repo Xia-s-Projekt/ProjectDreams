@@ -1876,6 +1876,11 @@ private fun SettingsScreen(
     val activeMode by viewModel.activeMode.collectAsStateWithLifecycle()
     val deleteAfterInstall by viewModel.deleteAfterInstall.collectAsStateWithLifecycle()
     var showClearDownloadsDialog by remember { mutableStateOf(false) }
+    var showAddGameDialog by remember { mutableStateOf(false) }
+    
+    if (showAddGameDialog) {
+        AddGameDialog(viewModel = viewModel, onDismiss = { showAddGameDialog = false })
+    }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val hazeState = remember { HazeState() }
@@ -1914,6 +1919,18 @@ private fun SettingsScreen(
                 .padding(horizontal = 20.dp)
                 .padding(padding),
         ) {
+            SectionTitle("Game Configuration")
+            Spacer(Modifier.height(8.dp))
+            PreferenceRow(
+                title = "Add Game",
+                subtitle = "Search and configure a new game to manage",
+                icon = androidx.compose.material.icons.Icons.Filled.Add,
+                iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                iconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                onClick = { showAddGameDialog = true }
+            )
+            
+            Spacer(Modifier.height(24.dp))
             SectionTitle("Installation Method")
             Spacer(Modifier.height(8.dp))
             InstallMethodPreference(
