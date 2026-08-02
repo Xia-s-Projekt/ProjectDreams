@@ -194,18 +194,22 @@ fun AppScreen(
             androidx.compose.animation.AnimatedContent(
                 targetState = screen,
                 label = "ScreenTransition",
+                modifier = Modifier.fillMaxSize(),
                 transitionSpec = {
-                    if (targetState == Screen.CheckUpdates && initialState == Screen.Settings) {
-                        (androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }) + androidx.compose.animation.fadeIn()).togetherWith(
-                            androidx.compose.animation.slideOutHorizontally(targetOffsetX = { -it / 2 }) + androidx.compose.animation.fadeOut()
-                        )
-                    } else if (targetState == Screen.Settings && initialState == Screen.CheckUpdates) {
-                        (androidx.compose.animation.slideInHorizontally(initialOffsetX = { -it / 2 }) + androidx.compose.animation.fadeIn()).togetherWith(
-                            androidx.compose.animation.slideOutHorizontally(targetOffsetX = { it }) + androidx.compose.animation.fadeOut()
-                        )
+                    val direction = if (targetState.ordinal > initialState.ordinal) {
+                        androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left
                     } else {
-                        androidx.compose.animation.fadeIn().togetherWith(androidx.compose.animation.fadeOut())
+                        androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right
                     }
+                    slideIntoContainer(
+                        towards = direction,
+                        animationSpec = androidx.compose.animation.core.tween(300)
+                    ).togetherWith(
+                        slideOutOfContainer(
+                            towards = direction,
+                            animationSpec = androidx.compose.animation.core.tween(300)
+                        )
+                    )
                 }
             ) { targetScreen ->
                 when (targetScreen) {
