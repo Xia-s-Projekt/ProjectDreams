@@ -203,13 +203,37 @@ fun AppScreen(
             if (resumeDownload) viewModel.requestResume()
         }
 
-        var screen by remember { mutableStateOf(Screen.Main) }
-        BackHandler(enabled = screen != Screen.Main) {
-            screen = if (screen == Screen.CheckUpdates) Screen.Settings else Screen.Main
+        val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 3 })
+        val coroutineScope = rememberCoroutineScope()
+        var overlayScreen by remember { mutableStateOf<Screen?>(null) }
+
+        val currentBaseScreen = when (pagerState.currentPage) {
+            0 -> Screen.Main
+            1 -> Screen.GameManager
+            2 -> Screen.Settings
+            else -> Screen.Main
+        }
+        val effectiveScreen = overlayScreen ?: currentBaseScreen
+
+        BackHandler(enabled = overlayScreen != null || pagerState.currentPage != 0) {
+            if (overlayScreen != null) {
+                overlayScreen = null
+            } else {
+                coroutineScope.launch { pagerState.animateScrollToPage(0) }
+            }
+        }
+
+        val navigateTo: (Screen) -> Unit = { target ->
+            when (target) {
+                Screen.Main -> { overlayScreen = null; coroutineScope.launch { pagerState.animateScrollToPage(0) } }
+                Screen.GameManager -> { overlayScreen = null; coroutineScope.launch { pagerState.animateScrollToPage(1) } }
+                Screen.Settings -> { overlayScreen = null; coroutineScope.launch { pagerState.animateScrollToPage(2) } }
+                Screen.CheckUpdates, Screen.AddGame -> { overlayScreen = target }
+            }
         }
         
         var isBottomBarVisible by remember { mutableStateOf(true) }
-        LaunchedEffect(screen) {
+        LaunchedEffect(effectiveScreen) {
             isBottomBarVisible = true
         }
         val nestedScrollConnection = remember {
@@ -226,49 +250,31 @@ fun AppScreen(
         }
         
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).nestedScroll(nestedScrollConnection)) {
-            androidx.compose.animation.AnimatedContent(
-                targetState = screen,
-                label = "ScreenTransition",
-                modifier = Modifier.fillMaxSize(),
-                transitionSpec = {
-                    val direction = if (targetState.ordinal > initialState.ordinal) {
-                        androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Left
-                    } else {
-                        androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Right
-                    }
-                    slideIntoContainer(
-                        towards = direction,
-                        animationSpec = androidx.compose.animation.core.spring(
-                            stiffness = 800f,
-                            dampingRatio = 0.9f
-                        )
-                    ).togetherWith(
-                        slideOutOfContainer(
-                            towards = direction,
-                            animationSpec = androidx.compose.animation.core.spring(
-                                stiffness = 800f,
-                                dampingRatio = 0.9f
-                            )
-                        )
+            androidx.compose.foundation.pager.HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                when (page) {
+                    0 -> MainContent(viewModel)
+                    1 -> GameManagerScreen(viewModel, onNavigate = navigateTo)
+                    2 -> SettingsScreen(
+                        viewModel,
+                        onOpenCheckUpdates = { navigateTo(Screen.CheckUpdates) },
+                        onNavigateToAddGame = { navigateTo(Screen.AddGame) }
                     )
                 }
-            ) { targetScreen ->
-                when (targetScreen) {
-                    Screen.Main -> MainContent(viewModel)
-                    Screen.GameManager -> GameManagerScreen(viewModel, onNavigate = { screen = it })
-                    Screen.Settings -> SettingsScreen(
-                        viewModel,
-                        onOpenCheckUpdates = { screen = Screen.CheckUpdates },
-                        onNavigateToAddGame = { screen = Screen.AddGame }
-                    )
-                    Screen.CheckUpdates -> CheckUpdatesScreen(
-                        viewModel,
-                        onBack = { screen = Screen.Settings }
-                    )
-                    Screen.AddGame -> AddGameScreen(
-                        viewModel,
-                        onBack = { screen = Screen.Settings }
-                    )
+            }
+            
+            androidx.compose.animation.AnimatedVisibility(
+                visible = overlayScreen != null,
+                enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }, animationSpec = androidx.compose.animation.core.spring(stiffness = 800f, dampingRatio = 0.9f)),
+                exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }, animationSpec = androidx.compose.animation.core.spring(stiffness = 800f, dampingRatio = 0.9f)),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (overlayScreen == Screen.CheckUpdates) {
+                    CheckUpdatesScreen(viewModel, onBack = { overlayScreen = null })
+                } else if (overlayScreen == Screen.AddGame) {
+                    AddGameScreen(viewModel, onBack = { overlayScreen = null })
                 }
             }
             
@@ -279,8 +285,8 @@ fun AppScreen(
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
                 FloatingNavBar(
-                    currentScreen = screen,
-                    onNavigate = { screen = it }
+                    currentScreen = currentBaseScreen,
+                    onNavigate = navigateTo
                 )
             }
         }
@@ -2882,146 +2888,182 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp, vertical = 8.dp)
                         .padding(bottom = 32.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Header Card
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         if (detail?.iconArtwork?.url != null) {
                             AsyncImage(
                                 model = detail.iconArtwork!!.url,
                                 contentDescription = null,
-                                modifier = Modifier.size(64.dp).clip(AbsoluteSmoothCornerShape(16.dp, 60))
+                                modifier = Modifier.size(80.dp).clip(AbsoluteSmoothCornerShape(20.dp, 60))
                             )
                         } else {
-                            androidx.compose.material3.Surface(modifier = Modifier.size(64.dp), shape = AbsoluteSmoothCornerShape(16.dp, 60), color = MaterialTheme.colorScheme.secondaryContainer) {
-                                Icon(Icons.Filled.Apps, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(16.dp))
+                            androidx.compose.material3.Surface(
+                                modifier = Modifier.size(80.dp),
+                                shape = AbsoluteSmoothCornerShape(20.dp, 60),
+                                color = MaterialTheme.colorScheme.secondaryContainer
+                            ) {
+                                Icon(Icons.Filled.Apps, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(20.dp))
                             }
                         }
                         Spacer(Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = displayName,
-                                style = MaterialTheme.typography.titleLarge,
+                                style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
                     
-                    androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    
-                    if (game.glPackage.isNotBlank()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Global Region", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Text(if (glInstalled) "Installed" else "Not Installed", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // Regions
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (game.glPackage.isNotBlank()) {
+                            androidx.compose.material3.Surface(
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                shape = AbsoluteSmoothCornerShape(20.dp, 60),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Global Region", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                        Text(if (glInstalled) "Installed" else "Not Installed", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    if (glInstalled) {
+                                        BouncyButton(
+                                            onClick = {
+                                                selectedGameForDetails = null
+                                                val intent = context.packageManager.getLaunchIntentForPackage(game.glPackage)
+                                                if (intent != null) context.startActivity(intent)
+                                            },
+                                            shape = AbsoluteSmoothCornerShape(14.dp, 60)
+                                        ) {
+                                            Text("Play", fontWeight = FontWeight.Bold)
+                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                        BouncyIconButton(
+                                            onClick = { 
+                                                packageToUninstall = game.glPackage
+                                                appNameToUninstall = "$displayName (GL)"
+                                                selectedGameForDetails = null
+                                            },
+                                            modifier = Modifier.size(44.dp).clip(AbsoluteSmoothCornerShape(14.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
+                                        ) {
+                                            Icon(Icons.Filled.Delete, contentDescription = "Uninstall", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(20.dp))
+                                        }
+                                    } else {
+                                        BouncyOutlinedButton(
+                                            onClick = {
+                                                viewModel.setGame(game)
+                                                selectedGameForDetails = null
+                                                onNavigate(Screen.Main)
+                                            },
+                                            shape = AbsoluteSmoothCornerShape(14.dp, 60)
+                                        ) {
+                                            Text("View Details")
+                                        }
+                                    }
+                                }
                             }
-                            if (glInstalled) {
-                                androidx.compose.material3.FilledTonalButton(
-                                    onClick = {
-                                        selectedGameForDetails = null
-                                        val intent = context.packageManager.getLaunchIntentForPackage(game.glPackage)
-                                        if (intent != null) context.startActivity(intent)
-                                    },
-                                    shape = AbsoluteSmoothCornerShape(12.dp, 60)
+                        }
+                        
+                        if (game.jpPackage.isNotBlank()) {
+                            androidx.compose.material3.Surface(
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                shape = AbsoluteSmoothCornerShape(20.dp, 60),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Play")
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                androidx.compose.material3.IconButton(
-                                    onClick = { 
-                                        packageToUninstall = game.glPackage
-                                        appNameToUninstall = displayName + " (GL)"
-                                        selectedGameForDetails = null
-                                    },
-                                    colors = androidx.compose.material3.IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                                ) {
-                                    Icon(Icons.Filled.Delete, contentDescription = "Uninstall")
-                                }
-                            } else {
-                                androidx.compose.material3.OutlinedButton(
-                                    onClick = {
-                                        viewModel.setGame(game)
-                                        selectedGameForDetails = null
-                                        onNavigate(Screen.Main)
-                                    },
-                                    shape = AbsoluteSmoothCornerShape(12.dp, 60)
-                                ) {
-                                    Text("View Details")
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Japan Region", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                        Text(if (jpInstalled) "Installed" else "Not Installed", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    if (jpInstalled) {
+                                        BouncyButton(
+                                            onClick = {
+                                                selectedGameForDetails = null
+                                                val intent = context.packageManager.getLaunchIntentForPackage(game.jpPackage)
+                                                if (intent != null) context.startActivity(intent)
+                                            },
+                                            shape = AbsoluteSmoothCornerShape(14.dp, 60)
+                                        ) {
+                                            Text("Play", fontWeight = FontWeight.Bold)
+                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                        BouncyIconButton(
+                                            onClick = { 
+                                                packageToUninstall = game.jpPackage
+                                                appNameToUninstall = "$displayName (JP)"
+                                                selectedGameForDetails = null
+                                            },
+                                            modifier = Modifier.size(44.dp).clip(AbsoluteSmoothCornerShape(14.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
+                                        ) {
+                                            Icon(Icons.Filled.Delete, contentDescription = "Uninstall", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(20.dp))
+                                        }
+                                    } else {
+                                        BouncyOutlinedButton(
+                                            onClick = {
+                                                viewModel.setGame(game)
+                                                selectedGameForDetails = null
+                                                onNavigate(Screen.Main)
+                                            },
+                                            shape = AbsoluteSmoothCornerShape(14.dp, 60)
+                                        ) {
+                                            Text("View Details")
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                     
-                    if (game.jpPackage.isNotBlank()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Japan Region", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Text(if (jpInstalled) "Installed" else "Not Installed", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            if (jpInstalled) {
-                                androidx.compose.material3.FilledTonalButton(
-                                    onClick = {
-                                        selectedGameForDetails = null
-                                        val intent = context.packageManager.getLaunchIntentForPackage(game.jpPackage)
-                                        if (intent != null) context.startActivity(intent)
-                                    },
-                                    shape = AbsoluteSmoothCornerShape(12.dp, 60)
-                                ) {
-                                    Text("Play")
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                androidx.compose.material3.IconButton(
-                                    onClick = { 
-                                        packageToUninstall = game.jpPackage
-                                        appNameToUninstall = displayName + " (JP)"
-                                        selectedGameForDetails = null
-                                    },
-                                    colors = androidx.compose.material3.IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                                ) {
-                                    Icon(Icons.Filled.Delete, contentDescription = "Uninstall")
-                                }
-                            } else {
-                                androidx.compose.material3.OutlinedButton(
-                                    onClick = {
-                                        viewModel.setGame(game)
-                                        selectedGameForDetails = null
-                                        onNavigate(Screen.Main)
-                                    },
-                                    shape = AbsoluteSmoothCornerShape(12.dp, 60)
-                                ) {
-                                    Text("View Details")
-                                }
-                            }
-                        }
-                    }
-                    
-                    androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        androidx.compose.material3.TextButton(
+                    // Actions
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        BouncyButton(
                             onClick = {
                                 gameToRemove = game
                                 selectedGameForDetails = null
                             },
-                            colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            ),
+                            shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                            modifier = Modifier.weight(1f).height(48.dp)
                         ) {
-                            Text("Remove from Library")
+                            Text("Untrack", fontWeight = FontWeight.Bold)
                         }
                         
-                        androidx.compose.material3.TextButton(
+                        BouncyButton(
                             onClick = {
                                 viewModel.gameToEdit = game
                                 selectedGameForDetails = null
                                 onNavigate(Screen.AddGame)
-                            }
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            ),
+                            shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                            modifier = Modifier.weight(1f).height(48.dp)
                         ) {
-                            Text("Edit Entry")
+                            Text("Edit Entry", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
         }
-
         if (showFilterSheet) {
             androidx.compose.material3.ModalBottomSheet(
                 onDismissRequest = { showFilterSheet = false },
