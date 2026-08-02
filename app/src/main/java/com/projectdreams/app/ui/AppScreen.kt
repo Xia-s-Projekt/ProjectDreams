@@ -3065,6 +3065,9 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
             }
         }
         if (showFilterSheet) {
+            var tempRegionFilter by remember { mutableStateOf(regionFilter) }
+            var tempInstallFilter by remember { mutableStateOf(installFilter) }
+            
             androidx.compose.material3.ModalBottomSheet(
                 onDismissRequest = { showFilterSheet = false },
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -3096,13 +3099,13 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         listOf("All" to "All Regions", "GL" to "Global Only", "JP" to "Japan Only").forEach { (key, label) ->
-                            val isSelected = regionFilter == key
+                            val isSelected = tempRegionFilter == key
                             val bg = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
                             androidx.compose.material3.Surface(
                                 color = bg,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { regionFilter = key }
+                                    .clickable { tempRegionFilter = key }
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
@@ -3122,13 +3125,13 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         listOf("All" to "All Storage", "Installed" to "Installed Only", "Uninstalled" to "Not Installed").forEach { (key, label) ->
-                            val isSelected = installFilter == key
+                            val isSelected = tempInstallFilter == key
                             val bg = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
                             androidx.compose.material3.Surface(
                                 color = bg,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { installFilter = key }
+                                    .clickable { tempInstallFilter = key }
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
@@ -3139,6 +3142,25 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                     androidx.compose.material3.RadioButton(selected = isSelected, onClick = null)
                                 }
                             }
+                        }
+                    }
+                    
+                    Spacer(Modifier.height(8.dp))
+                    
+                    BouncyButton(
+                        onClick = {
+                            regionFilter = tempRegionFilter
+                            installFilter = tempInstallFilter
+                            showFilterSheet = false
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = AbsoluteSmoothCornerShape(16.dp, 60)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text("Apply Filters", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
