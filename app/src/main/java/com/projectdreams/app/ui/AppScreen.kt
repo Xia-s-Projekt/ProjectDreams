@@ -1331,17 +1331,6 @@ private fun InstallAction(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        BouncyButton(
-                            onClick = onInstall,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(52.dp),
-                            shape = AbsoluteSmoothCornerShape(16.dp, 60)
-                        ) {
-                            Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Continue", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        }
                         BouncyOutlinedButton(
                             onClick = { showDeleteConfirm = true },
                             modifier = Modifier
@@ -1355,6 +1344,17 @@ private fun InstallAction(
                             Icon(Icons.Filled.Delete, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
                             Text("Delete", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        }
+                        BouncyButton(
+                            onClick = onInstall,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp),
+                            shape = AbsoluteSmoothCornerShape(16.dp, 60)
+                        ) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Continue", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         }
                     }
 
