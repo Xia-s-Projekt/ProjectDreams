@@ -665,78 +665,118 @@ private fun InstallFailedDialog(
     var showLogs by remember { mutableStateOf(false) }
     val clipboard = LocalClipboardManager.current
 
+    val isNetwork = state.isNetworkError
+    val themeColor = if (isNetwork) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+    val onThemeColor = if (isNetwork) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onError
+    val containerColor = if (isNetwork) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.errorContainer
+    val onContainerColor = if (isNetwork) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onErrorContainer
+
     AlertDialog(
         onDismissRequest = {},
+        shape = AbsoluteSmoothCornerShape(24.dp, 60),
         icon = {
-            Icon(
-                Icons.Filled.Info,
-                contentDescription = null,
-                tint = if (state.isNetworkError) {
-                    MaterialTheme.colorScheme.tertiary
-                } else {
-                    MaterialTheme.colorScheme.error
+            androidx.compose.material3.Surface(
+                shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                color = containerColor,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        androidx.compose.material.icons.Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = onContainerColor,
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
-            )
+            }
         },
         title = {
-            Text(if (state.isNetworkError) "No Internet Connection" else "Download failed!")
+            Text(
+                if (isNetwork) "No Internet Connection" else "Download Failed",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
         },
         text = {
-            Column {
-                if (state.isNetworkError) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (isNetwork) {
                     Text(
                         text = "Check your internet connection and try again.",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Don't worry — your download is saved and will " +
-                            "continue from where it left off, not from 0.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Don't worry — your download is saved and will continue from where it left off.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 } else {
                     Text(
-                        text = "But it's not your fault!",
+                        text = "Something went wrong during the installation. It's not your fault!",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
+                
+                Spacer(Modifier.height(16.dp))
+                
+                // Reason Card
+                androidx.compose.material3.Surface(
+                    shape = AbsoluteSmoothCornerShape(12.dp, 60),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "Error Details",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = state.message,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+                
                 Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "Failed reason:",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = state.message,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
                     BouncyTextButton(onClick = { showLogs = !showLogs }) {
-                        Text(if (showLogs) "Hide logs" else "Show logs")
+                        Text(if (showLogs) "Hide Logs" else "Show Logs")
                     }
                     BouncyTextButton(onClick = {
                         clipboard.setText(AnnotatedString("${state.message}\n\n${state.logs}"))
                     }) {
-                        Text("Copy logs")
+                        Text("Copy Logs")
                     }
                 }
+                
                 if (showLogs) {
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = state.logs,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            fontFamily = FontFamily.Monospace
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(160.dp)
-                            .clip(AbsoluteSmoothCornerShape(8.dp, 60))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(8.dp)
+                            .height(140.dp)
+                            .clip(AbsoluteSmoothCornerShape(12.dp, 60))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                            .padding(12.dp)
                             .verticalScroll(rememberScrollState())
                     )
                 }
@@ -745,14 +785,25 @@ private fun InstallFailedDialog(
         confirmButton = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                BouncyTextButton(onClick = onDismiss) {
-                    Text("Close", color = MaterialTheme.colorScheme.error)
+                BouncyOutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape = AbsoluteSmoothCornerShape(14.dp, 60)
+                ) {
+                    Text("Close", color = MaterialTheme.colorScheme.onSurface)
                 }
-                BouncyTextButton(onClick = onRetry) {
-                    Text("Retry", color = MaterialTheme.colorScheme.primary)
+                BouncyButton(
+                    onClick = onRetry,
+                    modifier = Modifier.weight(1f).height(44.dp),
+                    shape = AbsoluteSmoothCornerShape(14.dp, 60),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = themeColor,
+                        contentColor = onThemeColor
+                    )
+                ) {
+                    Text("Retry", fontWeight = FontWeight.Bold)
                 }
             }
         },
