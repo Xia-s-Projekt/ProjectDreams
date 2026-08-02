@@ -84,7 +84,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private fun loadAllGames() {
         viewModelScope.launch {
             val map = mutableMapOf<com.projectdreams.app.data.Game, com.aurora.gplayapi.data.models.App>()
-            com.projectdreams.app.data.Game.entries.forEach { game ->
+            allGames.forEach { game ->
                 try {
                     map[game] = app.storeRepository.getApp(game.glPackage)
                 } catch (e: Exception) {}
@@ -103,6 +103,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val autoUpdate = app.settingsRepository.autoUpdate
     val updateIntervalHours = app.settingsRepository.updateIntervalHours
     val region = app.settingsRepository.region
+    val allGames: List<Game> = app.settingsRepository.gamesList
     val game = app.settingsRepository.game
 
     fun setGame(game: com.projectdreams.app.data.Game) {

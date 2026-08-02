@@ -297,6 +297,7 @@ private fun MainContent(viewModel: AppViewModel) {
                     val gameDetails by viewModel.gameDetails.collectAsStateWithLifecycle()
                     GameDropdown(
                         game = game,
+                        allGames = viewModel.allGames,
                         appIconUrl = currentApp?.iconArtwork?.url,
                         gameDetails = gameDetails,
                         onSelect = viewModel::setGame
@@ -2327,7 +2328,8 @@ private fun NavBarItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GameDropdown(
-    game: Game, 
+    game: Game,
+    allGames: List<Game>,
     appIconUrl: String?, 
     gameDetails: Map<Game, com.aurora.gplayapi.data.models.App>, 
     onSelect: (Game) -> Unit
@@ -2368,7 +2370,7 @@ private fun GameDropdown(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
                     )
-                    Game.entries.forEach { option ->
+                    allGames.forEach { option ->
                         val detail = gameDetails[option]
                         androidx.compose.foundation.layout.Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -2415,7 +2417,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
     
     LaunchedEffect(Unit) {
         val list = mutableListOf<Pair<Game, String>>()
-        for (game in Game.entries) {
+        for (game in viewModel.allGames) {
             if (InstalledAppInfo.installedVersion(context, game.glPackage) != null) {
                 list.add(game to game.glPackage)
             }

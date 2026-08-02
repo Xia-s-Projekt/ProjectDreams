@@ -8,10 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** Play storefront region. GL = global build, JP = Japanese build. */
 
-enum class Game(val glPackage: String, val jpPackage: String, val fallbackName: String) {
-    HOLOLIVE_DREAMS("game.qualiarts.hololive.dreams.com", "game.qualiarts.hololive.dreams.jp", "Hololive Dreams"),
-    PROJECT_SEKAI("com.sega.ColorfulStage.en", "com.sega.pjsekai", "Project Sekai")
-}
+
 
 /** Play storefront region. GL = global build, JP = Japanese build. */
 enum class Region(val label: String) {
@@ -23,6 +20,22 @@ enum class Region(val label: String) {
  * Lightweight SharedPreferences-backed settings holder.
  */
 class SettingsRepository(context: Context) {
+    val gamesList: List<Game> by lazy {
+        val jsonString = context.assets.open("games.json").bufferedReader().use { it.readText() }
+        val jsonArray = org.json.JSONArray(jsonString)
+        val list = mutableListOf<Game>()
+        for (i in 0 until jsonArray.length()) {
+            val obj = jsonArray.getJSONObject(i)
+            list.add(Game(
+                id = obj.getString("id"),
+                glPackage = obj.getString("glPackage"),
+                jpPackage = obj.getString("jpPackage"),
+                fallbackName = obj.getString("fallbackName")
+            ))
+        }
+        list
+    }
+
 
     private val prefs =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -46,8 +59,7 @@ class SettingsRepository(context: Context) {
 
     
     private val _game = MutableStateFlow(
-        runCatching { Game.valueOf(prefs.getString(KEY_GAME, null) ?: "") }
-            .getOrDefault(Game.HOLOLIVE_DREAMS)
+        gamesList.find { it.id == prefs.getString(KEY_GAME, null) } ?: gamesList.first()
     )
     val game: StateFlow<Game> = _game.asStateFlow()
 
@@ -93,7 +105,7 @@ class SettingsRepository(context: Context) {
     
     fun setGame(value: Game) {
         _game.value = value
-        prefs.edit().putString(KEY_GAME, value.name).apply()
+        prefs.edit().putString(KEY_GAME, value.id).apply()
     }
 
     fun setRegion(value: Region) {

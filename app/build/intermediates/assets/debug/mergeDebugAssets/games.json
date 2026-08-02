@@ -1,0 +1,14 @@
+[
+  {
+    "id": "hololive_dreams",
+    "glPackage": "game.qualiarts.hololive.dreams.com",
+    "jpPackage": "game.qualiarts.hololive.dreams.jp",
+    "fallbackName": "Hololive Dreams"
+  },
+  {
+    "id": "project_sekai",
+    "glPackage": "com.sega.ColorfulStage.en",
+    "jpPackage": "com.sega.pjsekai",
+    "fallbackName": "Project Sekai"
+  }
+]
