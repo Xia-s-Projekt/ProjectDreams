@@ -1,5 +1,11 @@
 package com.projectdreams.app.ui
 
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.ui.platform.LocalContext
 import com.projectdreams.app.data.InstalledAppInfo
 
@@ -295,9 +301,10 @@ private fun MainContent(viewModel: AppViewModel) {
                 actions = {
                     val currentApp = (uiState as? AppUiState.Ready)?.app
                     val gameDetails by viewModel.gameDetails.collectAsStateWithLifecycle()
+    val allGames by viewModel.allGames.collectAsStateWithLifecycle()
                     GameDropdown(
                         game = game,
-                        allGames = viewModel.allGames,
+                        allGames = allGames,
                         appIconUrl = currentApp?.iconArtwork?.url,
                         gameDetails = gameDetails,
                         onSelect = viewModel::setGame
@@ -2410,14 +2417,17 @@ private fun GameDropdown(
 @Composable
 private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> Unit) {
     val gameDetails by viewModel.gameDetails.collectAsStateWithLifecycle()
+    val allGames by viewModel.allGames.collectAsStateWithLifecycle()
     val scrollState = androidx.compose.foundation.lazy.rememberLazyListState()
     val context = LocalContext.current
     
     var installedGames by remember { mutableStateOf<List<Pair<Game, String>>>(emptyList()) }
+    var packageToUninstall by remember { mutableStateOf<String?>(null) }
+    var appNameToUninstall by remember { mutableStateOf<String>("") }
     
-    LaunchedEffect(Unit) {
+    LaunchedEffect(allGames) {
         val list = mutableListOf<Pair<Game, String>>()
-        for (game in viewModel.allGames) {
+        for (game in allGames) {
             if (InstalledAppInfo.installedVersion(context, game.glPackage) != null) {
                 list.add(game to game.glPackage)
             }
@@ -2430,10 +2440,49 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
 
     val hazeState = remember { dev.chrisbanes.haze.HazeState() }
     
+    // Spinning geometry animation for title
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(4000, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+    val colorPhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(2000, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "colorPhase"
+    )
+    val accentColor = androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, colorPhase)
+
     Scaffold(
         topBar = {
             LargeTopAppBar(
-                title = { Text("Library", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineLarge) },
+                title = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Filled.AutoAwesome,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .graphicsLayer { 
+                                    rotationZ = rotation 
+                                    scaleX = 1f + (colorPhase * 0.2f)
+                                    scaleY = 1f + (colorPhase * 0.2f)
+                                }
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text("Library", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineLarge) 
+                    }
+                },
                 colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = Color.Transparent,
                     scrolledContainerColor = Color.Transparent
@@ -2470,6 +2519,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                         val isGl = pkg == game.glPackage
                         val regionLabel = if (isGl) "Global" else "Japan"
                         val detail = gameDetails[game]
+                        val displayName = detail?.displayName ?: game.fallbackName
                         
                         androidx.compose.foundation.layout.Row(
                             modifier = Modifier
@@ -2477,8 +2527,9 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                 .clip(AbsoluteSmoothCornerShape(20.dp, 60))
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
                                 .clickable {
-                                    val intent = context.packageManager.getLaunchIntentForPackage(pkg)
-                                    if (intent != null) context.startActivity(intent)
+                                    val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                    intent.data = android.net.Uri.parse("package:$pkg")
+                                    context.startActivity(intent)
                                 }
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -2493,7 +2544,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = detail?.displayName ?: game.fallbackName,
+                                    text = displayName,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
@@ -2501,7 +2552,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    text = "$regionLabel Region • $pkg",
+                                    text = "$regionLabel Region",
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -2517,19 +2568,17 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                             ) {
                                 BouncyIconButton(
                                     onClick = {
-                                        viewModel.setGame(game)
-                                        viewModel.setRegion(if (isGl) Region.GLOBAL else Region.JAPAN)
-                                        onNavigate(Screen.Main)
+                                        val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+                                        if (intent != null) context.startActivity(intent)
                                     },
                                     modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.primaryContainer)
                                 ) {
-                                    Icon(androidx.compose.material.icons.Icons.Filled.Settings, contentDescription = "Manage", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                                    Icon(androidx.compose.material.icons.Icons.Filled.PlayArrow, contentDescription = "Open", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
                                 }
                                 BouncyIconButton(
                                     onClick = {
-                                        val intent = android.content.Intent(android.content.Intent.ACTION_DELETE)
-                                        intent.data = android.net.Uri.parse("package:$pkg")
-                                        context.startActivity(intent)
+                                        packageToUninstall = pkg
+                                        appNameToUninstall = displayName
                                     },
                                     modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
                                 ) {
@@ -2541,5 +2590,169 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                 }
             }
         }
+        
+        if (packageToUninstall != null) {
+            AlertDialog(
+                onDismissRequest = { packageToUninstall = null },
+                title = { Text("Uninstall Game", fontWeight = FontWeight.Bold) },
+                text = { Text("Are you sure you want to uninstall $appNameToUninstall?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val pkg = packageToUninstall
+                        packageToUninstall = null
+                        if (pkg != null) {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_DELETE)
+                            intent.data = android.net.Uri.parse("package:$pkg")
+                            context.startActivity(intent)
+                        }
+                    }) {
+                        Text("Uninstall", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { packageToUninstall = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
     }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddGameDialog(
+    viewModel: AppViewModel,
+    onDismiss: () -> Unit
+) {
+    var gameId by remember { mutableStateOf("") }
+    var fallbackName by remember { mutableStateOf("") }
+    var glPackage by remember { mutableStateOf("") }
+    var jpPackage by remember { mutableStateOf("") }
+    
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearching by remember { mutableStateOf(false) }
+    var searchResults by remember { mutableStateOf<List<com.aurora.gplayapi.data.models.App>>(emptyList()) }
+    var searchTarget by remember { mutableStateOf<String?>(null) } // "GL" or "JP"
+    
+    val coroutineScope = rememberCoroutineScope()
+    
+    if (searchTarget != null) {
+        AlertDialog(
+            onDismissRequest = { searchTarget = null },
+            title = { Text("Search App") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        label = { Text("Search Query") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                if (searchQuery.isNotBlank()) {
+                                    isSearching = true
+                                    coroutineScope.launch {
+                                        searchResults = try {
+                                            viewModel.searchApps(searchQuery)
+                                        } catch (e: Exception) {
+                                            emptyList()
+                                        }
+                                        isSearching = false
+                                    }
+                                }
+                            }) {
+                                Icon(androidx.compose.material.icons.Icons.Filled.Search, contentDescription = "Search")
+                            }
+                        }
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    if (isSearching) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                    } else {
+                        androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                            items(searchResults.size) { i ->
+                                val app = searchResults[i]
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            if (searchTarget == "GL") glPackage = app.packageName
+                                            else if (searchTarget == "JP") jpPackage = app.packageName
+                                            if (fallbackName.isBlank()) fallbackName = app.displayName ?: ""
+                                            if (gameId.isBlank()) gameId = app.packageName.substringAfterLast(".")
+                                            searchTarget = null
+                                            searchResults = emptyList()
+                                        }
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (app.iconArtwork?.url != null) {
+                                        AsyncImage(
+                                            model = app.iconArtwork!!.url,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(40.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                    }
+                                    Column {
+                                        Text(app.displayName ?: "", fontWeight = FontWeight.Bold, maxLines = 1)
+                                        Text(app.packageName, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { searchTarget = null }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Game Configuration") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(value = gameId, onValueChange = { gameId = it }, label = { Text("Game ID (unique)") }, singleLine = true)
+                OutlinedTextField(value = fallbackName, onValueChange = { fallbackName = it }, label = { Text("Display Name") }, singleLine = true)
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(value = glPackage, onValueChange = { glPackage = it }, label = { Text("Global Package") }, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { searchTarget = "GL" }) {
+                        Icon(androidx.compose.material.icons.Icons.Filled.Search, contentDescription = "Search")
+                    }
+                }
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(value = jpPackage, onValueChange = { jpPackage = it }, label = { Text("Japan Package") }, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { searchTarget = "JP" }) {
+                        Icon(androidx.compose.material.icons.Icons.Filled.Search, contentDescription = "Search")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                if (gameId.isNotBlank() && (glPackage.isNotBlank() || jpPackage.isNotBlank())) {
+                    viewModel.addGameConfig(Game(gameId, glPackage, jpPackage, fallbackName.ifBlank { gameId }))
+                    viewModel.loadAllGames()
+                    onDismiss()
+                }
+            }) {
+                Text("Save Game")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

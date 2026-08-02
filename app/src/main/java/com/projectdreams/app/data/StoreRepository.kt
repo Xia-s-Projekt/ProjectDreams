@@ -24,6 +24,20 @@ class StoreRepository(
             .getAppByPackageName(packageName)
     }
 
+    suspend fun searchApps(query: String): List<App> = withContext(Dispatchers.IO) {
+        val authData = authRepository.authData()
+        val bundle = com.aurora.gplayapi.helpers.SearchHelper(authData)
+            .using(client)
+            .searchResults(query, "")
+        
+        // Flatten all apps from the clusters inside the bundle
+        val apps = mutableListOf<App>()
+        bundle.streamClusters.values.forEach { cluster ->
+            apps.addAll(cluster.clusterAppList)
+        }
+        apps
+    }
+
     suspend fun purchase(
         packageName: String,
         versionCode: Long,

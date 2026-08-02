@@ -81,10 +81,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _gameDetails = MutableStateFlow<Map<com.projectdreams.app.data.Game, com.aurora.gplayapi.data.models.App>>(emptyMap())
     val gameDetails: StateFlow<Map<com.projectdreams.app.data.Game, com.aurora.gplayapi.data.models.App>> = _gameDetails.asStateFlow()
 
-    private fun loadAllGames() {
+    fun loadAllGames() {
         viewModelScope.launch {
             val map = mutableMapOf<com.projectdreams.app.data.Game, com.aurora.gplayapi.data.models.App>()
-            allGames.forEach { game ->
+            allGames.value.forEach { game ->
                 try {
                     map[game] = app.storeRepository.getApp(game.glPackage)
                 } catch (e: Exception) {}
@@ -103,7 +103,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val autoUpdate = app.settingsRepository.autoUpdate
     val updateIntervalHours = app.settingsRepository.updateIntervalHours
     val region = app.settingsRepository.region
-    val allGames: List<Game> = app.settingsRepository.gamesList
+    val allGames = app.settingsRepository.gamesList
     val game = app.settingsRepository.game
 
     fun setGame(game: com.projectdreams.app.data.Game) {
@@ -123,6 +123,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             app.installManager.refreshAvailability(forceRootRecheck)
         }
+    }
+
+
+    suspend fun searchApps(query: String): List<App> {
+        return app.storeRepository.searchApps(query)
+    }
+    
+    fun addGameConfig(game: com.projectdreams.app.data.Game) {
+        app.settingsRepository.addGame(game)
     }
 
     init {

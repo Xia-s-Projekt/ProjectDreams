@@ -20,8 +20,15 @@ enum class Region(val label: String) {
  * Lightweight SharedPreferences-backed settings holder.
  */
 class SettingsRepository(context: Context) {
-    val gamesList: List<Game> by lazy {
-        val jsonString = context.assets.open("games.json").bufferedReader().use { it.readText() }
+    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val gamesFile = java.io.File(context.filesDir, "games.json")
+    
+    private val _gamesList = MutableStateFlow<List<Game>>(emptyList())
+    val gamesList: StateFlow<List<Game>> = _gamesList.asStateFlow()
+
+    private fun loadGames() {
+        if (!gamesFile.exists()) return
+        val jsonString = gamesFile.readText()
         val jsonArray = org.json.JSONArray(jsonString)
         val list = mutableListOf<Game>()
         for (i in 0 until jsonArray.length()) {
@@ -33,12 +40,29 @@ class SettingsRepository(context: Context) {
                 fallbackName = obj.getString("fallbackName")
             ))
         }
-        list
+        _gamesList.value = list
+    }
+
+    fun addGame(game: Game) {
+        val current = _gamesList.value.toMutableList()
+        if (current.any { it.id == game.id }) return
+        current.add(game)
+        
+        val jsonArray = org.json.JSONArray()
+        current.forEach { g ->
+            val obj = org.json.JSONObject()
+            obj.put("id", g.id)
+            obj.put("glPackage", g.glPackage)
+            obj.put("jpPackage", g.jpPackage)
+            obj.put("fallbackName", g.fallbackName)
+            jsonArray.put(obj)
+        }
+        gamesFile.writeText(jsonArray.toString(2))
+        _gamesList.value = current
     }
 
 
-    private val prefs =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
 
     private val _onboarded = MutableStateFlow(prefs.getBoolean(KEY_ONBOARDED, false))
     val onboarded: StateFlow<Boolean> = _onboarded.asStateFlow()
@@ -58,9 +82,21 @@ class SettingsRepository(context: Context) {
     val autoUpdate: StateFlow<Boolean> = _autoUpdate.asStateFlow()
 
     
-    private val _game = MutableStateFlow(
-        gamesList.find { it.id == prefs.getString(KEY_GAME, null) } ?: gamesList.first()
-    )
+    private val _game = MutableStateFlow(Game("hololive_dreams", "game.qualiarts.hololive.dreams.com", "game.qualiarts.hololive.dreams.jp", "Hololive Dreams"))
+
+    init {
+        if (!gamesFile.exists()) {
+            context.assets.open("games.json").use { input ->
+                gamesFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        }
+        loadGames()
+        
+        val savedId = prefs.getString(KEY_GAME, null)
+        _game.value = _gamesList.value.find { it.id == savedId } ?: _gamesList.value.firstOrNull() ?: Game("hololive_dreams", "game.qualiarts.hololive.dreams.com", "game.qualiarts.hololive.dreams.jp", "Hololive Dreams")
+    }
     val game: StateFlow<Game> = _game.asStateFlow()
 
     private val _region = MutableStateFlow(
