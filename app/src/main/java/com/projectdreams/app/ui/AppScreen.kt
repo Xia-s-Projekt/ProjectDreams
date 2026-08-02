@@ -2658,15 +2658,19 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
         topBar = {
             LargeTopAppBar(
                 title = { 
+                    val isCollapsed = scrollBehavior.state.collapsedFraction >= 0.5f
+                    val style = if (isCollapsed) MaterialTheme.typography.titleLarge else MaterialTheme.typography.displayMedium
+                    val iconSize = if (isCollapsed) 28.dp else 48.dp
+                    
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Filled.AutoAwesome,
                             contentDescription = null,
                             tint = accentColor,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(iconSize)
                         )
                         Spacer(Modifier.width(12.dp))
-                        Text("Library", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineLarge) 
+                        Text("Library", fontWeight = FontWeight.Bold, style = style) 
                     }
                 },
                 scrollBehavior = scrollBehavior,
