@@ -130,8 +130,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
-    suspend fun searchApps(query: String): List<App> {
-        return app.storeRepository.searchApps(query)
+    suspend fun searchApps(query: String, region: com.projectdreams.app.data.Region = app.settingsRepository.region.value): List<App> {
+        return app.storeRepository.searchApps(query, region)
     }
 
     suspend fun getApp(packageName: String): App {

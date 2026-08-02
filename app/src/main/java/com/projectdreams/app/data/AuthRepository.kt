@@ -59,6 +59,8 @@ class AuthRepository(
         props.putAll(baseDeviceProperties)
         if (region == Region.JAPAN) {
             props["TimeZone"] = "Asia/Tokyo"
+            props["SimOperator"] = "44010"
+            props["CellOperator"] = "44010"
         }
         return props
     }
@@ -108,7 +110,7 @@ class AuthRepository(
         authData
     }
 
-    private fun authKey(region: Region) = "${KEY_AUTH_DATA}_${region.name}"
+    private fun authKey(region: Region) = "${KEY_AUTH_DATA}_${region.name}_v2"
 
     companion object {
         private const val TAG = "AuthRepository"

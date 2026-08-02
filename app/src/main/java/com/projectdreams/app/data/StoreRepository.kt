@@ -24,18 +24,31 @@ class StoreRepository(
             .getAppByPackageName(packageName)
     }
 
-    suspend fun searchApps(query: String): List<App> = withContext(Dispatchers.IO) {
-        val authData = authRepository.authData()
-        val bundle = com.aurora.gplayapi.helpers.SearchHelper(authData)
-            .using(client)
-            .searchResults(query, "")
-        
-        // Flatten all apps from the clusters inside the bundle
-        val apps = mutableListOf<App>()
-        bundle.streamClusters.values.forEach { cluster ->
-            apps.addAll(cluster.clusterAppList)
+    suspend fun searchApps(query: String, region: com.projectdreams.app.data.Region = com.projectdreams.app.data.Region.GLOBAL): List<App> = withContext(Dispatchers.IO) {
+        val locale = if (region == com.projectdreams.app.data.Region.JAPAN) java.util.Locale.JAPAN else java.util.Locale.getDefault()
+        var results = emptyList<App>()
+        try {
+            val bundle = com.aurora.gplayapi.helpers.web.WebSearchHelper()
+                .using(client)
+                .with(locale)
+                .searchResults(query, "")
+            results = bundle.streamClusters.values.flatMap { it.clusterAppList }.distinctBy { it.packageName }
+            
+            if (region == com.projectdreams.app.data.Region.JAPAN) {
+                 results = results.sortedByDescending { it.packageName.contains("jp", ignoreCase = true) || it.displayName?.contains(query, ignoreCase = true) == true }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        apps
+
+        if (results.isEmpty()) {
+            val authData = authRepository.authData()
+            val bundle = com.aurora.gplayapi.helpers.SearchHelper(authData)
+                .using(client)
+                .searchResults(query, "")
+            results = bundle.streamClusters.values.flatMap { it.clusterAppList }.distinctBy { it.packageName }
+        }
+        results
     }
 
     suspend fun purchase(

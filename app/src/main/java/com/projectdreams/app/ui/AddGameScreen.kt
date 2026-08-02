@@ -138,7 +138,7 @@ fun AddGameScreen(
                                             coroutineScope.launch {
                                                 searchResults = try {
                                                     if (isPackageMode) listOf(viewModel.getApp(query.trim()))
-                                                    else viewModel.searchApps(query.trim())
+                                                    else viewModel.searchApps(query.trim(), if (currentStep == 6) com.projectdreams.app.data.Region.JAPAN else com.projectdreams.app.data.Region.GLOBAL)
                                                 } catch (e: Exception) { emptyList() }
                                                 isSearching = false
                                             }
@@ -205,7 +205,7 @@ fun AddGameScreen(
                                         onClick = {
                                             if (isGlobal) {
                                                 glApp = topApp; glPackage = topApp.packageName; step = 3; isSearching = true
-                                                coroutineScope.launch { searchResults = try { viewModel.searchApps("$query jp") } catch (e: Exception) { emptyList() }; isSearching = false }
+                                                coroutineScope.launch { searchResults = try { viewModel.searchApps(query.trim(), com.projectdreams.app.data.Region.JAPAN) } catch (e: Exception) { emptyList() }; isSearching = false }
                                             } else {
                                                 jpApp = topApp; jpPackage = topApp.packageName; step = 5
                                             }
@@ -224,7 +224,7 @@ fun AddGameScreen(
                                         onClick = {
                                             if (isGlobal) {
                                                 glPackage = ""; step = 3; isSearching = true
-                                                coroutineScope.launch { searchResults = try { viewModel.searchApps("$query jp") } catch (e: Exception) { emptyList() }; isSearching = false }
+                                                coroutineScope.launch { searchResults = try { viewModel.searchApps(query.trim(), com.projectdreams.app.data.Region.JAPAN) } catch (e: Exception) { emptyList() }; isSearching = false }
                                             } else {
                                                 jpPackage = ""; step = 5
                                             }
@@ -249,7 +249,7 @@ fun AddGameScreen(
                                             modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).clip(AbsoluteSmoothCornerShape(16.dp, 60)).clickable {
                                                 if (isGlobal) {
                                                     glApp = app; glPackage = app.packageName; step = 3; isSearching = true
-                                                    coroutineScope.launch { searchResults = try { viewModel.searchApps("$query jp") } catch (e: Exception) { emptyList() }; isSearching = false }
+                                                    coroutineScope.launch { searchResults = try { viewModel.searchApps(query.trim(), com.projectdreams.app.data.Region.JAPAN) } catch (e: Exception) { emptyList() }; isSearching = false }
                                                 } else {
                                                     jpApp = app; jpPackage = app.packageName; step = 5
                                                 }
