@@ -2531,7 +2531,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     
-    var libraryItems by remember { mutableStateOf<List<Triple<com.projectdreams.app.data.Game, String, Boolean>>>(emptyList()) }
+    var libraryItems by remember { mutableStateOf<List<Triple<com.projectdreams.app.data.Game, Boolean, Boolean>>>(emptyList()) }
     var packageToUninstall by remember { mutableStateOf<String?>(null) }
     var appNameToUninstall by remember { mutableStateOf<String>("") }
     var gameToRemove by remember { mutableStateOf<com.projectdreams.app.data.Game?>(null) }
@@ -2540,6 +2540,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
     var installFilter by remember { mutableStateOf("All") }
     var regionFilter by remember { mutableStateOf("All") }
     var isEditMode by remember { mutableStateOf(false) }
+    var selectedGameForDetails by remember { mutableStateOf<Triple<com.projectdreams.app.data.Game, Boolean, Boolean>?>(null) }
     
     // FAB Scroll animation state
     var previousIndex by remember { mutableStateOf(0) }
@@ -2560,39 +2561,44 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
     }
     
     LaunchedEffect(allGames, gameDetails, searchQuery, installFilter, regionFilter) {
-        val list = mutableListOf<Triple<com.projectdreams.app.data.Game, String, Boolean>>()
-        for (game in allGames) {
-            val glInstalled = InstalledAppInfo.installedVersion(context, game.glPackage) != null
-            val jpInstalled = InstalledAppInfo.installedVersion(context, game.jpPackage) != null
-            
-            if (game.glPackage.isNotBlank()) list.add(Triple(game, game.glPackage, glInstalled))
-            if (game.jpPackage.isNotBlank()) list.add(Triple(game, game.jpPackage, jpInstalled))
-            if (game.glPackage.isBlank() && game.jpPackage.isBlank()) list.add(Triple(game, "", false))
-        }
-        
-        var filteredList = list.filter { item ->
-            val (game, pkg, isInstalled) = item
-            val isGl = pkg == game.glPackage
+        var filteredList = allGames.map { game ->
+            val glInstalled = game.glPackage.isNotBlank() && InstalledAppInfo.installedVersion(context, game.glPackage) != null
+            val jpInstalled = game.jpPackage.isNotBlank() && InstalledAppInfo.installedVersion(context, game.jpPackage) != null
+            Triple(game, glInstalled, jpInstalled)
+        }.filter { item ->
+            val (game, glInstalled, jpInstalled) = item
             
             val matchSearch = if (searchQuery.isBlank()) true else {
                 val displayName = gameDetails[game]?.displayName ?: game.fallbackName
-                displayName.contains(searchQuery, ignoreCase = true) || pkg.contains(searchQuery, ignoreCase = true)
+                displayName.contains(searchQuery, ignoreCase = true) || 
+                game.glPackage.contains(searchQuery, ignoreCase = true) ||
+                game.jpPackage.contains(searchQuery, ignoreCase = true)
+            }
+            
+            val matchRegion = when (regionFilter) {
+                "GL" -> game.glPackage.isNotBlank()
+                "JP" -> game.jpPackage.isNotBlank()
+                else -> true
             }
             
             val matchInstall = when (installFilter) {
-                "Installed" -> isInstalled
-                "Uninstalled" -> !isInstalled
+                "Installed" -> when (regionFilter) {
+                    "GL" -> glInstalled
+                    "JP" -> jpInstalled
+                    else -> glInstalled || jpInstalled
+                }
+                "Uninstalled" -> when (regionFilter) {
+                    "GL" -> !glInstalled
+                    "JP" -> !jpInstalled
+                    else -> !glInstalled && !jpInstalled
+                }
                 else -> true
             }
-            val matchRegion = when (regionFilter) {
-                "GL" -> isGl
-                "JP" -> !isGl
-                else -> true
-            }
+            
             matchSearch && matchInstall && matchRegion
         }
         
-        filteredList = filteredList.sortedWith(compareBy({ !it.third }, { gameDetails[it.first]?.displayName ?: it.first.fallbackName }))
+        filteredList = filteredList.sortedWith(compareBy({ !(it.second || it.third) }, { gameDetails[it.first]?.displayName ?: it.first.fallbackName }))
         libraryItems = filteredList
     }
 
@@ -2790,26 +2796,30 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                         modifier = Modifier.padding(horizontal = 16.dp)
                     ) {
                         items(libraryItems.size) { index ->
-                            val (game, pkg, isInstalled) = libraryItems[index]
-                            val isGl = pkg == game.glPackage
-                            val regionLabel = if (isGl) "Global" else "Japan"
+                            val item = libraryItems[index]
+                            val (game, glInstalled, jpInstalled) = item
+                            val isAnyInstalled = glInstalled || jpInstalled
                             val detail = gameDetails[game]
                             val displayName = detail?.displayName ?: game.fallbackName
+                            
+                            val statusText = if (glInstalled && jpInstalled) {
+                                "Installed: Both"
+                            } else if (glInstalled) {
+                                "Installed: GL"
+                            } else if (jpInstalled) {
+                                "Installed: JP"
+                            } else {
+                                "Not Installed"
+                            }
                             
                             androidx.compose.foundation.layout.Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(AbsoluteSmoothCornerShape(20.dp, 60))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isInstalled) 0.8f else 0.4f))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isAnyInstalled) 0.8f else 0.4f))
                                     .clickable {
                                         if (!isEditMode) {
-                                            if (isInstalled) {
-                                                val intent = context.packageManager.getLaunchIntentForPackage(pkg)
-                                                if (intent != null) context.startActivity(intent)
-                                            } else {
-                                                viewModel.setGame(game)
-                                                onNavigate(Screen.Main)
-                                            }
+                                            selectedGameForDetails = item
                                         }
                                     }
                                     .padding(16.dp),
@@ -2820,11 +2830,11 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                         model = detail.iconArtwork!!.url,
                                         contentDescription = null,
                                         modifier = Modifier.size(56.dp).clip(AbsoluteSmoothCornerShape(14.dp, 60)),
-                                        alpha = if (isInstalled) 1f else 0.5f
+                                        alpha = if (isAnyInstalled) 1f else 0.5f
                                     )
                                     Spacer(Modifier.width(16.dp))
                                 } else {
-                                    androidx.compose.material3.Surface(modifier = Modifier.size(56.dp), shape = AbsoluteSmoothCornerShape(14.dp, 60), color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (isInstalled) 1f else 0.5f)) {
+                                    androidx.compose.material3.Surface(modifier = Modifier.size(56.dp), shape = AbsoluteSmoothCornerShape(14.dp, 60), color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (isAnyInstalled) 1f else 0.5f)) {
                                         Icon(Icons.Filled.Apps, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(12.dp))
                                     }
                                     Spacer(Modifier.width(16.dp))
@@ -2836,13 +2846,13 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isInstalled) 1f else 0.5f)
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isAnyInstalled) 1f else 0.5f)
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        text = "$regionLabel Region" + if (isInstalled) "" else " (Not Installed)",
+                                        text = statusText,
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (isInstalled) 1f else 0.5f),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (isAnyInstalled) 1f else 0.5f),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -2858,15 +2868,26 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         modifier = Modifier.padding(start = 12.dp)
                                     ) {
-                                        if (isInstalled) {
+                                        if (glInstalled) {
                                             BouncyIconButton(
                                                 onClick = {
-                                                    packageToUninstall = pkg
-                                                    appNameToUninstall = displayName
+                                                    packageToUninstall = game.glPackage
+                                                    appNameToUninstall = displayName + " (GL)"
                                                 },
                                                 modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
                                             ) {
-                                                Icon(Icons.Filled.Delete, contentDescription = "Uninstall", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(20.dp))
+                                                Icon(Icons.Filled.Delete, contentDescription = "Uninstall GL", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(20.dp))
+                                            }
+                                        }
+                                        if (jpInstalled) {
+                                            BouncyIconButton(
+                                                onClick = {
+                                                    packageToUninstall = game.jpPackage
+                                                    appNameToUninstall = displayName + " (JP)"
+                                                },
+                                                modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
+                                            ) {
+                                                Icon(Icons.Filled.Delete, contentDescription = "Uninstall JP", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(20.dp))
                                             }
                                         }
                                         BouncyIconButton(
