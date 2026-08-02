@@ -2657,6 +2657,7 @@ private fun AddGameBottomSheet(
     
     var isSearching by remember { mutableStateOf(false) }
     var searchResults by remember { mutableStateOf<List<com.aurora.gplayapi.data.models.App>>(emptyList()) }
+    var isPackageMode by remember { mutableStateOf(false) }
     
     androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -2680,11 +2681,17 @@ private fun AddGameBottomSheet(
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
-                        label = { Text("Game Title") },
+                        label = { Text(if (isPackageMode) "Package Name (e.g. jp.co.craftegg.band)" else "Game Title") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { isPackageMode = !isPackageMode }) {
+                        androidx.compose.material3.Switch(checked = isPackageMode, onCheckedChange = { isPackageMode = it })
+                        Spacer(Modifier.width(12.dp))
+                        Text("Search by exact Package Name")
+                    }
+                    Spacer(Modifier.height(16.dp))
                     Button(
                         onClick = {
                             if (query.isNotBlank()) {
@@ -2692,7 +2699,11 @@ private fun AddGameBottomSheet(
                                 step = 1
                                 coroutineScope.launch {
                                     searchResults = try {
-                                        viewModel.searchApps(query)
+                                        if (isPackageMode) {
+                                            listOf(viewModel.getApp(query.trim()))
+                                        } else {
+                                            viewModel.searchApps(query.trim())
+                                        }
                                     } catch (e: Exception) {
                                         emptyList()
                                     }
@@ -2862,11 +2873,17 @@ private fun AddGameBottomSheet(
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
-                        label = { Text("Japan Game Title") },
+                        label = { Text(if (isPackageMode) "Package Name (e.g. jp.co.craftegg.band)" else "Japan Game Title") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { isPackageMode = !isPackageMode }) {
+                        androidx.compose.material3.Switch(checked = isPackageMode, onCheckedChange = { isPackageMode = it })
+                        Spacer(Modifier.width(12.dp))
+                        Text("Search by exact Package Name")
+                    }
+                    Spacer(Modifier.height(16.dp))
                     Button(
                         onClick = {
                             if (query.isNotBlank()) {
@@ -2874,7 +2891,11 @@ private fun AddGameBottomSheet(
                                 step = 3 // go back to Confirm JP with new results
                                 coroutineScope.launch {
                                     searchResults = try {
-                                        viewModel.searchApps(query)
+                                        if (isPackageMode) {
+                                            listOf(viewModel.getApp(query.trim()))
+                                        } else {
+                                            viewModel.searchApps(query.trim())
+                                        }
                                     } catch (e: Exception) {
                                         emptyList()
                                     }
@@ -2894,11 +2915,17 @@ private fun AddGameBottomSheet(
                     OutlinedTextField(
                         value = query,
                         onValueChange = { query = it },
-                        label = { Text("Global Game Title") },
+                        label = { Text(if (isPackageMode) "Package Name" else "Global Game Title") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { isPackageMode = !isPackageMode }) {
+                        androidx.compose.material3.Switch(checked = isPackageMode, onCheckedChange = { isPackageMode = it })
+                        Spacer(Modifier.width(12.dp))
+                        Text("Search by exact Package Name")
+                    }
+                    Spacer(Modifier.height(16.dp))
                     Button(
                         onClick = {
                             if (query.isNotBlank()) {
@@ -2906,7 +2933,11 @@ private fun AddGameBottomSheet(
                                 step = 1 // go back to Confirm GL with new results
                                 coroutineScope.launch {
                                     searchResults = try {
-                                        viewModel.searchApps(query)
+                                        if (isPackageMode) {
+                                            listOf(viewModel.getApp(query.trim()))
+                                        } else {
+                                            viewModel.searchApps(query.trim())
+                                        }
                                     } catch (e: Exception) {
                                         emptyList()
                                     }

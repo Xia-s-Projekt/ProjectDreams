@@ -133,6 +133,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun searchApps(query: String): List<App> {
         return app.storeRepository.searchApps(query)
     }
+
+    suspend fun getApp(packageName: String): App {
+        return app.storeRepository.getApp(packageName)
+    }
     
     fun addGameConfig(game: com.projectdreams.app.data.Game) {
         app.settingsRepository.addGame(game)
