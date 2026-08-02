@@ -115,20 +115,20 @@ fun BackgroundKillerCard() {
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (exempted) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-            if (!exempted) {
-                Spacer(Modifier.size(12.dp))
-                androidx.compose.material3.Surface(
-                    color = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = AbsoluteSmoothCornerShape(999.dp, 60)
-                ) {
-                    Text(
-                        text = "Tap to disable",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                    )
+                if (!exempted) {
+                    androidx.compose.material3.Surface(
+                        color = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = AbsoluteSmoothCornerShape(999.dp, 60),
+                        modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+                    ) {
+                        Text(
+                            text = "Tap to disable",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
                 }
             }
         }
