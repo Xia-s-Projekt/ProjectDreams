@@ -206,11 +206,11 @@ fun AppScreen(
                     }
                     slideIntoContainer(
                         towards = direction,
-                        animationSpec = androidx.compose.animation.core.tween(300)
+                        animationSpec = androidx.compose.animation.core.tween(200)
                     ).togetherWith(
                         slideOutOfContainer(
                             towards = direction,
-                            animationSpec = androidx.compose.animation.core.tween(300)
+                            animationSpec = androidx.compose.animation.core.tween(200)
                         )
                     )
                 }
