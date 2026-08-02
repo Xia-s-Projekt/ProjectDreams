@@ -111,10 +111,25 @@ fun BackgroundKillerCard() {
                     color = if (exempted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (exempted) "Already exempted — good to go." else "Some phones kill background apps aggressively. Exempt ProjectDreams to keep updates working.",
+                    text = if (exempted) "Already exempted — good to go." else "Some phones kill background apps aggressively. Tap to exempt ProjectDreams to keep updates working.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (exempted) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+            if (!exempted) {
+                Spacer(Modifier.size(12.dp))
+                androidx.compose.material3.Surface(
+                    color = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = AbsoluteSmoothCornerShape(999.dp, 60)
+                ) {
+                    Text(
+                        text = "Tap to disable",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
+                }
             }
         }
     }
