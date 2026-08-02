@@ -177,6 +177,9 @@ fun AppScreen(
         }
         
         var isBottomBarVisible by remember { mutableStateOf(true) }
+        LaunchedEffect(screen) {
+            isBottomBarVisible = true
+        }
         val nestedScrollConnection = remember {
             object : NestedScrollConnection {
                 override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: NestedScrollSource): androidx.compose.ui.geometry.Offset {
