@@ -2858,6 +2858,251 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
             }
         }
         
+
+        if (selectedGameForDetails != null) {
+            val item = selectedGameForDetails!!
+            val (game, glInstalled, jpInstalled) = item
+            val detail = gameDetails[game]
+            val displayName = detail?.displayName ?: game.fallbackName
+            
+            androidx.compose.material3.ModalBottomSheet(
+                onDismissRequest = { selectedGameForDetails = null },
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = AbsoluteSmoothCornerShape(
+                    androidx.compose.foundation.shape.CornerSize(28.dp),
+                    androidx.compose.foundation.shape.CornerSize(28.dp),
+                    androidx.compose.foundation.shape.CornerSize(0.dp),
+                    androidx.compose.foundation.shape.CornerSize(0.dp),
+                    60
+                ),
+                dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle() }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                        .padding(bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (detail?.iconArtwork?.url != null) {
+                            AsyncImage(
+                                model = detail.iconArtwork!!.url,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp).clip(AbsoluteSmoothCornerShape(16.dp, 60))
+                            )
+                        } else {
+                            androidx.compose.material3.Surface(modifier = Modifier.size(64.dp), shape = AbsoluteSmoothCornerShape(16.dp, 60), color = MaterialTheme.colorScheme.secondaryContainer) {
+                                Icon(Icons.Filled.Apps, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(16.dp))
+                            }
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = displayName,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                    
+                    androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    
+                    if (game.glPackage.isNotBlank()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Global Region", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(if (glInstalled) "Installed" else "Not Installed", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (glInstalled) {
+                                androidx.compose.material3.FilledTonalButton(
+                                    onClick = {
+                                        selectedGameForDetails = null
+                                        val intent = context.packageManager.getLaunchIntentForPackage(game.glPackage)
+                                        if (intent != null) context.startActivity(intent)
+                                    },
+                                    shape = AbsoluteSmoothCornerShape(12.dp, 60)
+                                ) {
+                                    Text("Play")
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                androidx.compose.material3.IconButton(
+                                    onClick = { 
+                                        packageToUninstall = game.glPackage
+                                        appNameToUninstall = displayName + " (GL)"
+                                        selectedGameForDetails = null
+                                    },
+                                    colors = androidx.compose.material3.IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                ) {
+                                    Icon(Icons.Filled.Delete, contentDescription = "Uninstall")
+                                }
+                            } else {
+                                androidx.compose.material3.OutlinedButton(
+                                    onClick = {
+                                        viewModel.setGame(game)
+                                        selectedGameForDetails = null
+                                        onNavigate(Screen.Main)
+                                    },
+                                    shape = AbsoluteSmoothCornerShape(12.dp, 60)
+                                ) {
+                                    Text("View Details")
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (game.jpPackage.isNotBlank()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Japan Region", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(if (jpInstalled) "Installed" else "Not Installed", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (jpInstalled) {
+                                androidx.compose.material3.FilledTonalButton(
+                                    onClick = {
+                                        selectedGameForDetails = null
+                                        val intent = context.packageManager.getLaunchIntentForPackage(game.jpPackage)
+                                        if (intent != null) context.startActivity(intent)
+                                    },
+                                    shape = AbsoluteSmoothCornerShape(12.dp, 60)
+                                ) {
+                                    Text("Play")
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                androidx.compose.material3.IconButton(
+                                    onClick = { 
+                                        packageToUninstall = game.jpPackage
+                                        appNameToUninstall = displayName + " (JP)"
+                                        selectedGameForDetails = null
+                                    },
+                                    colors = androidx.compose.material3.IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                ) {
+                                    Icon(Icons.Filled.Delete, contentDescription = "Uninstall")
+                                }
+                            } else {
+                                androidx.compose.material3.OutlinedButton(
+                                    onClick = {
+                                        viewModel.setGame(game)
+                                        selectedGameForDetails = null
+                                        onNavigate(Screen.Main)
+                                    },
+                                    shape = AbsoluteSmoothCornerShape(12.dp, 60)
+                                ) {
+                                    Text("View Details")
+                                }
+                            }
+                        }
+                    }
+                    
+                    androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        androidx.compose.material3.TextButton(
+                            onClick = {
+                                gameToRemove = game
+                                selectedGameForDetails = null
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Remove from Library")
+                        }
+                        
+                        androidx.compose.material3.TextButton(
+                            onClick = {
+                                viewModel.gameToEdit = game
+                                selectedGameForDetails = null
+                                onNavigate(Screen.AddGame)
+                            }
+                        ) {
+                            Text("Edit Entry")
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showFilterSheet) {
+            androidx.compose.material3.ModalBottomSheet(
+                onDismissRequest = { showFilterSheet = false },
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = AbsoluteSmoothCornerShape(
+                    androidx.compose.foundation.shape.CornerSize(28.dp),
+                    androidx.compose.foundation.shape.CornerSize(28.dp),
+                    androidx.compose.foundation.shape.CornerSize(0.dp),
+                    androidx.compose.foundation.shape.CornerSize(0.dp),
+                    60
+                ),
+                dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle() }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                        .padding(bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Library Filters",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Text("Region", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Column(
+                        modifier = Modifier.clip(AbsoluteSmoothCornerShape(20.dp, 60)),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        listOf("All" to "All Regions", "GL" to "Global Only", "JP" to "Japan Only").forEach { (key, label) ->
+                            val isSelected = regionFilter == key
+                            val bg = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
+                            androidx.compose.material3.Surface(
+                                color = bg,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { regionFilter = key }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(label, style = MaterialTheme.typography.bodyLarge, color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface)
+                                    androidx.compose.material3.RadioButton(selected = isSelected, onClick = null)
+                                }
+                            }
+                        }
+                    }
+                    
+                    Text("Installation Status", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Column(
+                        modifier = Modifier.clip(AbsoluteSmoothCornerShape(20.dp, 60)),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        listOf("All" to "All Storage", "Installed" to "Installed Only", "Uninstalled" to "Not Installed").forEach { (key, label) ->
+                            val isSelected = installFilter == key
+                            val bg = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
+                            androidx.compose.material3.Surface(
+                                color = bg,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { installFilter = key }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(label, style = MaterialTheme.typography.bodyLarge, color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface)
+                                    androidx.compose.material3.RadioButton(selected = isSelected, onClick = null)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if (gameToRemove != null) {
             AlertDialog(
                 onDismissRequest = { gameToRemove = null },
