@@ -87,7 +87,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             allGames.value.forEach { game ->
                 try {
                     map[game] = app.storeRepository.getApp(game.glPackage)
-                } catch (e: Exception) {}
+                } catch (e: Exception) {
+                    try {
+                        map[game] = app.storeRepository.getApp(game.jpPackage)
+                    } catch (e: Exception) {}
+                }
             }
             _gameDetails.value = map
         }

@@ -30,6 +30,12 @@ import com.projectdreams.app.ui.theme.bouncyPress
 import com.projectdreams.app.ui.theme.AbsoluteSmoothCornerShape
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.Image
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
@@ -332,7 +338,13 @@ private fun MainContent(viewModel: AppViewModel) {
         ) {
             when (val state = uiState) {
                 is AppUiState.Loading -> LoadingView()
-                is AppUiState.Error -> ErrorView(state.message) { viewModel.loadApp() }
+                is AppUiState.Error -> {
+                    if (state.message.contains("not found", ignoreCase = true) || state.message.contains("404", ignoreCase = true)) {
+                        RegionUnavailableView(onRetry = { viewModel.loadApp() })
+                    } else {
+                        ErrorView(state.message) { viewModel.loadApp() }
+                    }
+                }
                 is AppUiState.Ready -> AppDetailView(
                     state = state,
                     installState = installState,
@@ -454,6 +466,66 @@ private fun ErrorView(message: String, onRetry: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         BouncyButton(onClick = onRetry) {
             Text("Retry")
+        }
+    }
+}
+
+@Composable
+private fun RegionUnavailableView(onRetry: () -> Unit) {
+    val infiniteTransition = rememberInfiniteTransition(label = "spin")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "spin"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .graphicsLayer { rotationZ = rotation }
+                .clip(AbsoluteSmoothCornerShape(36.dp, 60))
+                .background(MaterialTheme.colorScheme.secondaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.Warning,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(64.dp)
+                    .graphicsLayer { rotationZ = -rotation }, // Counter-rotate icon
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
+        Spacer(Modifier.height(32.dp))
+        Text(
+            text = "Region Unavailable",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "This application is not available in the currently selected region. Please switch regions from the top menu.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        Spacer(Modifier.height(32.dp))
+        BouncyButton(
+            onClick = onRetry
+        ) {
+            Text("Refresh", fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -2613,26 +2685,73 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
         if (packageToUninstall != null) {
             AlertDialog(
                 onDismissRequest = { packageToUninstall = null },
-                title = { Text("Uninstall Game", fontWeight = FontWeight.Bold) },
-                text = { Text("Are you sure you want to uninstall $appNameToUninstall?") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        val pkg = packageToUninstall
-                        packageToUninstall = null
-                        if (pkg != null) {
-                            val intent = android.content.Intent(android.content.Intent.ACTION_DELETE)
-                            intent.data = android.net.Uri.parse("package:$pkg")
-                            context.startActivity(intent)
+                shape = AbsoluteSmoothCornerShape(24.dp, 60),
+                icon = {
+                    androidx.compose.material3.Surface(
+                        shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                androidx.compose.material.icons.Icons.Filled.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(28.dp)
+                            )
                         }
-                    }) {
-                        Text("Uninstall", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                     }
                 },
-                dismissButton = {
-                    TextButton(onClick = { packageToUninstall = null }) {
-                        Text("Cancel")
+                title = {
+                    Text(
+                        text = "Uninstall $appNameToUninstall?",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                },
+                text = {
+                    Text(
+                        text = "This app will be removed from your device. This action cannot be undone.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        BouncyOutlinedButton(
+                            onClick = { packageToUninstall = null },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = AbsoluteSmoothCornerShape(14.dp, 60)
+                        ) {
+                            Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        BouncyButton(
+                            onClick = {
+                                val pkg = packageToUninstall
+                                packageToUninstall = null
+                                if (pkg != null) {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_DELETE)
+                                    intent.data = android.net.Uri.parse("package:$pkg")
+                                    context.startActivity(intent)
+                                }
+                            },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = AbsoluteSmoothCornerShape(14.dp, 60),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            )
+                        ) {
+                            Text("Uninstall", fontWeight = FontWeight.Bold)
+                        }
                     }
-                }
+                },
+                dismissButton = {}
             )
         }
     }
