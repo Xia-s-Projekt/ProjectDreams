@@ -2408,7 +2408,7 @@ private fun GameDropdown(
 @Composable
 private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> Unit) {
     val gameDetails by viewModel.gameDetails.collectAsStateWithLifecycle()
-    val scrollState = rememberScrollState()
+    val scrollState = androidx.compose.foundation.lazy.rememberLazyListState()
     val context = LocalContext.current
     
     var installedGames by remember { mutableStateOf<List<Pair<Game, String>>>(emptyList()) }
@@ -2426,104 +2426,118 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
         installedGames = list
     }
 
+    val hazeState = remember { dev.chrisbanes.haze.HazeState() }
+    
     Scaffold(
         topBar = {
             LargeTopAppBar(
-                title = { Text("Game Library", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
+                title = { Text("Library", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineLarge) },
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent
+                ),
+                modifier = Modifier.hazeChild(
+                    state = hazeState,
+                    style = dev.chrisbanes.haze.HazeStyle(
+                        tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), 
+                        blurRadius = 16.dp
+                    )
                 )
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
+                .haze(state = hazeState)
                 .padding(padding)
-                .verticalScroll(scrollState)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (installedGames.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize().padding(top = 100.dp), contentAlignment = Alignment.Center) {
-                    Text("No games installed yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No games installed yet.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
                 }
             } else {
-                installedGames.forEach { (game, pkg) ->
-                    val isGl = pkg == game.glPackage
-                    val regionLabel = if (isGl) "Global" else "Japan"
-                    val detail = gameDetails[game]
-                    
-                    SquircleCard {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (detail?.iconArtwork?.url != null) {
-                                    AsyncImage(
-                                        model = detail.iconArtwork!!.url,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(48.dp).clip(AbsoluteSmoothCornerShape(12.dp, 60))
-                                    )
-                                    Spacer(Modifier.width(16.dp))
+                androidx.compose.foundation.lazy.LazyColumn(
+                    state = scrollState,
+                    contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    items(installedGames.size) { index ->
+                        val (game, pkg) = installedGames[index]
+                        val isGl = pkg == game.glPackage
+                        val regionLabel = if (isGl) "Global" else "Japan"
+                        val detail = gameDetails[game]
+                        
+                        androidx.compose.foundation.layout.Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(AbsoluteSmoothCornerShape(20.dp, 60))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                                .clickable {
+                                    val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+                                    if (intent != null) context.startActivity(intent)
                                 }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = detail?.displayName ?: game.fallbackName,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = "$regionLabel Region • $pkg",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (detail?.iconArtwork?.url != null) {
+                                AsyncImage(
+                                    model = detail.iconArtwork!!.url,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(56.dp).clip(AbsoluteSmoothCornerShape(14.dp, 60))
+                                )
+                                Spacer(Modifier.width(16.dp))
                             }
-                            Spacer(Modifier.height(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = detail?.displayName ?: game.fallbackName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "$regionLabel Region • $pkg",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            
+                            Spacer(Modifier.width(12.dp))
+                            
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                BouncyTextButton(
-                                    onClick = {
-                                        val intent = android.content.Intent(android.content.Intent.ACTION_DELETE)
-                                        intent.data = android.net.Uri.parse("package:$pkg")
-                                        context.startActivity(intent)
-                                    },
-                                    modifier = Modifier.clip(AbsoluteSmoothCornerShape(12.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
-                                ) {
-                                    Text("Uninstall", color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold)
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                BouncyTextButton(
-                                    onClick = {
-                                        val intent = context.packageManager.getLaunchIntentForPackage(pkg)
-                                        if (intent != null) {
-                                            context.startActivity(intent)
-                                        } else {
-                                            android.widget.Toast.makeText(context, "Cannot open app", android.widget.Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    modifier = Modifier.clip(AbsoluteSmoothCornerShape(12.dp, 60)).background(MaterialTheme.colorScheme.secondaryContainer)
-                                ) {
-                                    Text("Open", color = MaterialTheme.colorScheme.onSecondaryContainer, fontWeight = FontWeight.Bold)
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                BouncyTextButton(
+                                BouncyIconButton(
                                     onClick = {
                                         viewModel.setGame(game)
                                         viewModel.setRegion(if (isGl) Region.GLOBAL else Region.JAPAN)
                                         onNavigate(Screen.Main)
                                     },
-                                    modifier = Modifier.clip(AbsoluteSmoothCornerShape(12.dp, 60)).background(MaterialTheme.colorScheme.primaryContainer)
+                                    modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.primaryContainer)
                                 ) {
-                                    Text("Manage", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                                    Icon(androidx.compose.material.icons.Icons.Filled.Settings, contentDescription = "Manage", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                                }
+                                BouncyIconButton(
+                                    onClick = {
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_DELETE)
+                                        intent.data = android.net.Uri.parse("package:$pkg")
+                                        context.startActivity(intent)
+                                    },
+                                    modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
+                                ) {
+                                    Icon(androidx.compose.material.icons.Icons.Filled.Delete, contentDescription = "Uninstall", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
                     }
                 }
             }
-            Spacer(Modifier.height(100.dp))
         }
     }
 }

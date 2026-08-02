@@ -10,6 +10,8 @@
     <queries>
         <package android:name="game.qualiarts.hololive.dreams.com" />
         <package android:name="game.qualiarts.hololive.dreams.jp" />
+        <package android:name="com.sega.ColorfulStage.en" />
+        <package android:name="com.sega.pjsekai" />
     </queries>
 
     <application
