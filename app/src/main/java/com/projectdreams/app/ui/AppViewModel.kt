@@ -78,6 +78,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private val _gameDetails = MutableStateFlow<Map<com.projectdreams.app.data.Game, com.aurora.gplayapi.data.models.App>>(emptyMap())
+    val gameDetails: StateFlow<Map<com.projectdreams.app.data.Game, com.aurora.gplayapi.data.models.App>> = _gameDetails.asStateFlow()
+
+    private fun loadAllGames() {
+        viewModelScope.launch {
+            val map = mutableMapOf<com.projectdreams.app.data.Game, com.aurora.gplayapi.data.models.App>()
+            com.projectdreams.app.data.Game.entries.forEach { game ->
+                try {
+                    map[game] = app.storeRepository.getApp(game.glPackage)
+                } catch (e: Exception) {}
+            }
+            _gameDetails.value = map
+        }
+    }
+
     private var downloadJob: Job? = null
 
     /** Set when the notification asks to resume an interrupted download. */
@@ -116,6 +131,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             app.installManager.refreshAvailability()
+            loadAllGames()
             loadApp()
         }
     }
@@ -159,6 +175,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         app.settingsRepository.setOnboarded(true)
         viewModelScope.launch {
             app.installManager.refreshAvailability()
+            loadAllGames()
             loadApp()
         }
     }
