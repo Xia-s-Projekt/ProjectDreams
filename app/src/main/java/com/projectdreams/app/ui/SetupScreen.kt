@@ -682,7 +682,7 @@ private fun DisclaimerPage(accepted: Boolean, onAccepted: (Boolean) -> Unit) {
             Text(
                 text = "• No Affiliation: We are not endorsed by, affiliated with, or connected to any game publisher or developer.\n" +
                      "• Copyrights: All games and related intellectual property are entirely owned by their respective rights holders.\n" +
-                     "• Delivery: This software generates no revenue. It acts solely as a direct bridge to the official Google Play servers, hosting no proprietary assets natively.",
+                     "• Delivery: This software generates no revenue. We do not save, host, or distribute any game assets. All packages are fetched directly from Google Play servers to your device with no intermediary gating or storage.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

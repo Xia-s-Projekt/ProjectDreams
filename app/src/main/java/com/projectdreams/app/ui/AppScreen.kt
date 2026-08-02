@@ -2017,7 +2017,8 @@ private fun SettingsScreen(
                 text = "ProjectDreams is an independent, open-source downloader. It is not " +
                     "affiliated with, endorsed by, or connected to any game publisher or developer " +
                     "in any way. All games and related intellectual property are owned by their respective rights holders, and " +
-                    "this project makes no revenue from it. All trademarks belong to their " +
+                    "this project makes no revenue from it. We do not save, host, or distribute game assets; everything is " +
+                    "fetched directly from Google Play servers to your device. All trademarks belong to their " +
                     "respective owners.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
