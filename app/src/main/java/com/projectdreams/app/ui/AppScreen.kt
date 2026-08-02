@@ -2563,7 +2563,8 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                 onClick = { onNavigate(Screen.AddGame) },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = AbsoluteSmoothCornerShape(16.dp, 60)
+                shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                modifier = Modifier.padding(bottom = 80.dp)
             ) {
                 Icon(androidx.compose.material.icons.Icons.Filled.Add, contentDescription = "Add Game")
             }
