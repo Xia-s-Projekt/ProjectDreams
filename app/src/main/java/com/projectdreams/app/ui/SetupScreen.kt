@@ -20,6 +20,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -125,6 +129,7 @@ fun SetupScreen(
 
     CompositionLocalProvider(LocalOverscrollFactory provides null) {
         Scaffold(
+            contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
             bottomBar = {
             SetupBottomBar(
                 pagerState = pagerState,
@@ -156,8 +161,8 @@ fun SetupScreen(
         ) {
             HorizontalPager(
                 state = pagerState,
-                userScrollEnabled = false, // Same as PixelPlayer!
-                modifier = Modifier.fillMaxSize()
+                userScrollEnabled = false,
+                modifier = Modifier.fillMaxSize().statusBarsPadding()
             ) { page ->
                 val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                 val absOffset = kotlin.math.abs(pageOffset).coerceIn(0f, 1f)
@@ -256,7 +261,7 @@ fun SetupBottomBar(
         shape = shape
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 14.dp)
         ) {
             Row(
                 modifier = Modifier
