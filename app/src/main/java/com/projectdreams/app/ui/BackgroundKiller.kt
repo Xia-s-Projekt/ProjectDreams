@@ -57,60 +57,90 @@ fun BackgroundKillerCard() {
         exempted = powerManager.isIgnoringBatteryOptimizations(context.packageName)
     }
 
-    Card(
+    BouncyCard(
+        onClick = {
+            if (!exempted) {
+                try {
+                    launcher.launch(
+                        Intent(
+                            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                            Uri.parse("package:${context.packageName}")
+                        )
+                    )
+                } catch (_: ActivityNotFoundException) {
+                    launcher.launch(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                }
+            }
+        },
+        shape = AbsoluteSmoothCornerShape(16.dp, 60),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Power, contentDescription = null)
-                Spacer(Modifier.size(12.dp))
-                Text(
-                    text = "Disable background app killer",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            Spacer(Modifier.size(8.dp))
-            Text(
-                text = "Some phones kill background apps aggressively, which would stop " +
-                    "automatic updates and downloads. Exempt ProjectDreams from battery " +
-                    "optimization so it can keep working.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.size(12.dp))
-            if (exempted) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            androidx.compose.material3.Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                modifier = Modifier.size(46.dp)
+            ) {
+                androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        Icons.Filled.CheckCircle,
+                        imageVector = Icons.Filled.Power,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.size(8.dp))
-                    Text(
-                        text = "Already exempted — good to go",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
-            } else {
-                Button(onClick = {
-                    try {
-                        launcher.launch(
-                            Intent(
-                                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                                Uri.parse("package:${context.packageName}")
-                            )
+            }
+            Spacer(Modifier.size(14.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Disable background app killer",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Some phones kill background apps aggressively, which would stop automatic updates and downloads. Exempt ProjectDreams from battery optimization so it can keep working.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                if (exempted) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
                         )
-                    } catch (_: ActivityNotFoundException) {
-                        launcher.launch(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                        Spacer(Modifier.size(8.dp))
+                        Text(
+                            text = "Already exempted — good to go",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
-                }) {
-                    Text("Allow background activity")
+                } else {
+                    androidx.compose.material3.Surface(
+                        color = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = AbsoluteSmoothCornerShape(999.dp, 60),
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Text(
+                            text = "Allow background activity",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
                 }
             }
         }
