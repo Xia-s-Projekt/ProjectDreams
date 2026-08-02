@@ -76,26 +76,27 @@ fun BackgroundKillerCard() {
                 } catch (_: Exception) {}
             }
         },
-        shape = AbsoluteSmoothCornerShape(16.dp, 60),
+        shape = AbsoluteSmoothCornerShape(20.dp, 60),
         colors = CardDefaults.cardColors(
-            containerColor = if (exempted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
+            containerColor = if (exempted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         ),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             androidx.compose.material3.Surface(
                 color = if (exempted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
-                shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                shape = AbsoluteSmoothCornerShape(14.dp, 60),
                 modifier = Modifier.size(46.dp)
             ) {
                 androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Filled.Power,
                         contentDescription = null,
-                        tint = if (exempted) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                        tint = if (exempted) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }

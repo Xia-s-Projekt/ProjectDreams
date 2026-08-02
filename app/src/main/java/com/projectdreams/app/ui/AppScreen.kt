@@ -56,6 +56,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
@@ -621,7 +625,7 @@ private fun AppDetailView(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            androidx.compose.material.icons.Icons.Filled.Delete,
+                            Icons.Filled.Delete,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.size(28.dp)
@@ -1370,7 +1374,7 @@ private fun InstallAction(
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
-                                            androidx.compose.material.icons.Icons.Filled.Delete,
+                                            Icons.Filled.Delete,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.onErrorContainer,
                                             modifier = Modifier.size(28.dp)
@@ -1659,6 +1663,148 @@ private fun InstallAction(
     }
 }
 
+@Composable
+private fun PreferenceRow(
+    title: String,
+    subtitle: String? = null,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconContainerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.secondaryContainer,
+    iconContentColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSecondaryContainer,
+    action: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit
+) {
+    BouncyCard(
+        onClick = onClick,
+        shape = AbsoluteSmoothCornerShape(20.dp, 60),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            androidx.compose.material3.Surface(
+                shape = AbsoluteSmoothCornerShape(14.dp, 60),
+                color = iconContainerColor,
+                modifier = Modifier.size(46.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, tint = iconContentColor, modifier = Modifier.size(24.dp))
+                }
+            }
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                if (subtitle != null) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (action != null) {
+                Spacer(Modifier.width(12.dp))
+                action()
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSwitchRow(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    PreferenceRow(
+        title = title,
+        subtitle = subtitle,
+        icon = icon,
+        iconContainerColor = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        iconContentColor = if (checked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        onClick = { onCheckedChange(!checked) },
+        action = {
+            androidx.compose.material3.Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+        }
+    )
+}
+
+@Composable
+private fun InstallMethodPreference(
+    label: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    available: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onAction: (() -> Unit)? = null,
+    actionLabel: String? = null
+) {
+    val containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    val contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    
+    val statusText = if (available) "Granted" else "Not Granted"
+    val statusColor = if (available) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+
+    BouncyCard(
+        onClick = onClick,
+        shape = AbsoluteSmoothCornerShape(20.dp, 60),
+        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = containerColor),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.Surface(
+                    shape = AbsoluteSmoothCornerShape(14.dp, 60),
+                    color = if (selected) contentColor.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.size(46.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(24.dp))
+                    }
+                }
+                Spacer(Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = contentColor)
+                    Spacer(Modifier.height(2.dp))
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = contentColor.copy(alpha = 0.8f))
+                }
+                androidx.compose.material3.Surface(
+                    color = if (selected) contentColor.copy(alpha = 0.1f) else statusColor.copy(alpha = 0.1f),
+                    shape = AbsoluteSmoothCornerShape(8.dp, 60)
+                ) {
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (selected) contentColor.copy(alpha = 0.9f) else statusColor,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+            if (!available && onAction != null && actionLabel != null) {
+                Spacer(Modifier.height(12.dp))
+                BouncyButton(
+                    onClick = onAction,
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    shape = AbsoluteSmoothCornerShape(14.dp, 60),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text(actionLabel, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScreen(
@@ -1675,7 +1821,7 @@ private fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text("Settings", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     BouncyIconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -1694,88 +1840,81 @@ private fun SettingsScreen(
                 .padding(horizontal = 20.dp)
                 .padding(padding),
         ) {
-            SectionTitle("Installation method")
+            SectionTitle("Installation Method")
             Spacer(Modifier.height(8.dp))
-            InstallMethodSquircleCard(
-                rootAvailable = rootAvailable,
-                shizukuAvailable = shizukuAvailable,
-                activeMode = activeMode,
-                onSelectRoot = {
+            InstallMethodPreference(
+                label = "Root",
+                subtitle = "Highest success rate, requires unlocked bootloader.",
+                icon = Icons.Filled.Lock,
+                available = rootAvailable,
+                selected = activeMode == InstallManager.Mode.ROOT,
+                onClick = {
                     viewModel.selectInstallMode(InstallManager.Mode.ROOT)
                     viewModel.refreshPrivilegeStatus(forceRootRecheck = true)
                 },
-                onSelectShizuku = {
+                onAction = { viewModel.refreshPrivilegeStatus(forceRootRecheck = true) },
+                actionLabel = "Re-check root access"
+            )
+            InstallMethodPreference(
+                label = "Shizuku",
+                subtitle = "Secure local ADB installation method.",
+                icon = Icons.Filled.Terminal,
+                available = shizukuAvailable,
+                selected = activeMode == InstallManager.Mode.SHIZUKU,
+                onClick = {
                     viewModel.selectInstallMode(InstallManager.Mode.SHIZUKU)
                     viewModel.refreshPrivilegeStatus()
                 },
-                onRequestShizuku = viewModel::requestShizukuPermission,
-                onRecheckRoot = { viewModel.refreshPrivilegeStatus(forceRootRecheck = true) }
+                onAction = viewModel::requestShizukuPermission,
+                actionLabel = "Grant Shizuku access"
             )
 
             Spacer(Modifier.height(24.dp))
-            SectionTitle("Updates")
+            SectionTitle("Updates & Sync")
             Spacer(Modifier.height(8.dp))
-            BouncyCard(
+            PreferenceRow(
+                title = "Check for updates",
+                subtitle = "Interval, notifications, auto update",
+                icon = Icons.Filled.Refresh,
+                iconContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                iconContentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                 onClick = onOpenCheckUpdates,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Refresh, contentDescription = null)
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Check for updates",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "Interval, notifications, auto update",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                action = {
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
+            )
 
             Spacer(Modifier.height(24.dp))
-            SectionTitle("Storage")
+            SectionTitle("Storage Management")
             Spacer(Modifier.height(8.dp))
             SettingsSwitchRow(
-                title = "Delete downloads after installing",
-                subtitle = "Frees ~350 MB per install by removing the downloaded APKs",
+                title = "Delete downloaded files",
+                subtitle = "Frees ~350 MB after app installation",
+                icon = Icons.Filled.Delete,
                 checked = deleteAfterInstall,
                 onCheckedChange = viewModel::setDeleteAfterInstall
             )
-            Spacer(Modifier.height(8.dp))
-            BouncyOutlinedButton(
-                onClick = { showClearDownloadsDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Filled.Delete, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text("Clear downloaded files")
-            }
+            PreferenceRow(
+                title = "Clear cached downloads",
+                subtitle = "Deletes all downloaded APKs manually",
+                icon = Icons.Filled.Delete,
+                iconContainerColor = MaterialTheme.colorScheme.errorContainer,
+                iconContentColor = MaterialTheme.colorScheme.onErrorContainer,
+                onClick = { showClearDownloadsDialog = true }
+            )
 
             Spacer(Modifier.height(24.dp))
-            SectionTitle("Background")
+            SectionTitle("Battery & Background")
             Spacer(Modifier.height(8.dp))
             BackgroundKillerCard()
 
-            Spacer(Modifier.height(24.dp))
-            Divider()
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(32.dp))
+            Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            Spacer(Modifier.height(16.dp))
             Text(
                 text = "Disclaimer",
                 style = MaterialTheme.typography.titleSmall,
@@ -1791,162 +1930,68 @@ private fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(32.dp))
             Text(
                 text = "Xia Projekt",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(24.dp))
-        }
-    }
-
-    if (showClearDownloadsDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearDownloadsDialog = false },
-            title = { Text("Clear downloaded files?") },
-            text = { Text("Removes any previously downloaded APKs from storage.") },
-            confirmButton = {
-                BouncyTextButton(onClick = {
-                    showClearDownloadsDialog = false
-                    viewModel.clearDownloads()
-                }) {
-                    Text("Clear", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                BouncyTextButton(onClick = { showClearDownloadsDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-}
-
-@Composable
-private fun SettingsSwitchRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp)
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyMedium)
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
             )
         }
-        BouncySwitch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
 
-@Composable
-private fun InstallMethodSquircleCard(
-    rootAvailable: Boolean,
-    shizukuAvailable: Boolean,
-    activeMode: InstallManager.Mode,
-    onSelectRoot: () -> Unit,
-    onSelectShizuku: () -> Unit,
-    onRequestShizuku: () -> Unit,
-    onRecheckRoot: () -> Unit = {}
-) {
-    SquircleCard(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Install method",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Installs via `pm -i com.android.vending` to simulate Play Store",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MethodChip(
-                    label = "Root",
-                    available = rootAvailable,
-                    selected = activeMode == InstallManager.Mode.ROOT,
-                    onClick = onSelectRoot
-                )
-                MethodChip(
-                    label = "Shizuku",
-                    available = shizukuAvailable,
-                    selected = activeMode == InstallManager.Mode.SHIZUKU,
-                    onClick = onSelectShizuku
-                )
-            }
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = when {
-                    activeMode == InstallManager.Mode.ROOT && !rootAvailable ->
-                        "Root is not granted to this app. Grant it in your root manager."
-                    activeMode == InstallManager.Mode.SHIZUKU && !shizukuAvailable ->
-                        "Shizuku is not granted."
-                    else -> " "
+        if (showClearDownloadsDialog) {
+            AlertDialog(
+                onDismissRequest = { showClearDownloadsDialog = false },
+                shape = AbsoluteSmoothCornerShape(24.dp, 60),
+                icon = {
+                    androidx.compose.material3.Surface(
+                        shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
                 },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
-            )
-            if (activeMode == InstallManager.Mode.SHIZUKU && !shizukuAvailable) {
-                BouncyTextButton(onClick = onRequestShizuku) {
-                    Text("Grant Shizuku access")
-                }
-            }
-            if (activeMode == InstallManager.Mode.ROOT && !rootAvailable) {
-                BouncyTextButton(onClick = onRecheckRoot) {
-                    Text("Re-check root access")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MethodChip(
-    label: String,
-    available: Boolean,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val colors = when {
-        selected && available -> ButtonDefaults.filledTonalButtonColors()
-        selected && !available -> ButtonDefaults.outlinedButtonColors()
-        else -> ButtonDefaults.outlinedButtonColors()
-    }
-    BouncyOutlinedButton(
-        onClick = onClick,
-        enabled = true,
-        colors = colors,
-        shape = AbsoluteSmoothCornerShape(12.dp, 60)
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
-            Text(
-                text = if (available) "Granted" else "Not granted",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (available) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.error
-                }
+                title = { Text("Clear downloaded files?", fontWeight = FontWeight.Bold) },
+                text = { Text("This will permanently remove all downloaded APKs.") },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        BouncyOutlinedButton(
+                            onClick = { showClearDownloadsDialog = false },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = AbsoluteSmoothCornerShape(14.dp, 60)
+                        ) {
+                            Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        BouncyButton(
+                            onClick = {
+                                showClearDownloadsDialog = false
+                                viewModel.clearDownloads()
+                            },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = AbsoluteSmoothCornerShape(14.dp, 60),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            )
+                        ) {
+                            Text("Clear", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                },
+                dismissButton = {}
             )
         }
     }
@@ -2080,6 +2125,7 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
             SettingsSwitchRow(
                 title = "Update notifications",
                 subtitle = "Be notified when a new version is available",
+                icon = Icons.Filled.Notifications,
                 checked = updateNotifications,
                 onCheckedChange = { enabled ->
                     if (enabled) {
@@ -2091,6 +2137,7 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
             SettingsSwitchRow(
                 title = "Auto update",
                 subtitle = "Download and install updates automatically (needs root or Shizuku)",
+                icon = Icons.Filled.CloudDownload,
                 checked = autoUpdate,
                 onCheckedChange = viewModel::setAutoUpdate
             )
