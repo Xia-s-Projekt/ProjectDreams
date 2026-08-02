@@ -633,7 +633,7 @@ private fun BackgroundPage(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Frees ~350 MB per install by removing downloaded APKs",
+                    text = "Frees storage space by removing downloaded APKs after installation.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
