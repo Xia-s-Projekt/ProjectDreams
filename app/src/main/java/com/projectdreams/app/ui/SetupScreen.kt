@@ -426,7 +426,7 @@ private fun WelcomePage() {
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            text = "Everyone's favorite rhythm game.",
+            text = "Your unified gateway to regional games.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
