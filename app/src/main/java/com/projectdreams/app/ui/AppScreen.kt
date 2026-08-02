@@ -2623,7 +2623,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         floatingActionButton = {
             androidx.compose.animation.AnimatedVisibility(
-                visible = isScrollingUp || scrollState.firstVisibleItemIndex == 0,
+                visible = isScrollingUp || (scrollState.firstVisibleItemIndex == 0 && scrollState.firstVisibleItemScrollOffset == 0),
                 enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(),
                 exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut()
             ) {
