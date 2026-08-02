@@ -775,14 +775,17 @@ private fun InstallMethodConfirmDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Installation method") },
+        shape = AbsoluteSmoothCornerShape(24.dp, 60),
+        title = { 
+            Text(
+                "Installation Method", 
+                style = MaterialTheme.typography.headlineSmall, 
+                fontWeight = FontWeight.Bold
+            ) 
+        },
         text = {
             Column {
-                Text(
-                    text = "Install hololive Dreams via:",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
                 MethodRadioRow(
                     label = "Root",
                     available = rootAvailable,
@@ -801,16 +804,29 @@ private fun InstallMethodConfirmDialog(
                         onSelectMode(InstallManager.Mode.SHIZUKU)
                     }
                 )
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.bouncyPress()) {
-                    Checkbox(
-                        checked = dontAskAgain,
-                        onCheckedChange = { dontAskAgain = it }
-                    )
-                    Text(
-                        text = "Don't ask again",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                Spacer(Modifier.height(16.dp))
+                androidx.compose.material3.Surface(
+                    onClick = { dontAskAgain = !dontAskAgain },
+                    shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                    color = if (dontAskAgain) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Don't ask again",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (dontAskAgain) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        androidx.compose.material3.Switch(
+                            checked = dontAskAgain,
+                            onCheckedChange = { dontAskAgain = it }
+                        )
+                    }
                 }
             }
         },
@@ -819,12 +835,12 @@ private fun InstallMethodConfirmDialog(
                 onDontAskAgain(dontAskAgain)
                 onInstall()
             }) {
-                Text("Install")
+                Text("Install", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             BouncyTextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Cancel", fontWeight = FontWeight.SemiBold)
             }
         }
     )
@@ -837,30 +853,51 @@ private fun MethodRadioRow(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .bouncyPress()
-            .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+    val backgroundColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    val contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    
+    val statusText = if (available) "Granted" else "Not Granted"
+    val statusColor = if (available) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        shape = AbsoluteSmoothCornerShape(16.dp, 60),
+        color = backgroundColor,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
     ) {
-        RadioButton(selected = selected, onClick = onClick)
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = if (available) "Granted" else "Not granted",
-            style = MaterialTheme.typography.labelMedium,
-            color = if (available) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.error
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = contentColor,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(4.dp))
+                androidx.compose.material3.Surface(
+                    color = if (selected) contentColor.copy(alpha = 0.1f) else statusColor.copy(alpha = 0.1f),
+                    shape = AbsoluteSmoothCornerShape(6.dp, 60)
+                ) {
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (selected) contentColor.copy(alpha = 0.9f) else statusColor,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
             }
-        )
+            if (selected) {
+                Icon(
+                    androidx.compose.material.icons.Icons.Filled.CheckCircle,
+                    contentDescription = "Selected",
+                    tint = contentColor
+                )
+            }
+        }
     }
 }
 
