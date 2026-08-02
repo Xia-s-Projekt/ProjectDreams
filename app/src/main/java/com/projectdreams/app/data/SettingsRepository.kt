@@ -49,7 +49,7 @@ class SettingsRepository(context: Context) {
     val confirmInstallMethod: StateFlow<Boolean> = _confirmInstallMethod.asStateFlow()
 
     private val _deleteAfterInstall = MutableStateFlow(
-        prefs.getBoolean(KEY_DELETE_AFTER_INSTALL, true)
+        prefs.getBoolean(KEY_DELETE_AFTER_INSTALL, false)
     )
     val deleteAfterInstall: StateFlow<Boolean> = _deleteAfterInstall.asStateFlow()
 

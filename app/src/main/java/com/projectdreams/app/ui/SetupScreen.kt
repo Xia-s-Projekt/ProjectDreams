@@ -93,7 +93,7 @@ fun SetupScreen(
     onFinish: (InstallManager.Mode) -> Unit
 ) {
     var selectedMode by remember { mutableStateOf<InstallManager.Mode?>(null) }
-    var notificationsEnabled by remember { mutableStateOf(true) }
+    var notificationsEnabled by remember { mutableStateOf(false) }
     var disclaimerAccepted by remember { mutableStateOf(false) }
     val pagerState = rememberPagerState(pageCount = { PAGE_COUNT })
     val scope = rememberCoroutineScope()
@@ -171,7 +171,6 @@ fun SetupScreen(
                             scaleX = scale
                             scaleY = scale
                             this.alpha = alpha
-                            translationX = size.width * pageOffset
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -248,7 +247,7 @@ fun SetupBottomBar(
         topEnd = CornerSize(36.dp),
         bottomEnd = CornerSize(0.dp),
         bottomStart = CornerSize(0.dp),
-        smoothness = 60
+        smoothness = 0
     )
 
     Surface(
@@ -308,13 +307,17 @@ fun SetupBottomBar(
                 }
 
                 androidx.compose.material3.FloatingActionButton(
-                    onClick = if (isLastPage) onFinishClicked else onNextClicked,
+                    onClick = {
+                        if (isPrimaryButtonEnabled) {
+                            if (isLastPage) onFinishClicked() else onNextClicked()
+                        }
+                    },
                     shape = AbsoluteSmoothCornerShape(
                         topStart = CornerSize(animatedTopStart.toInt().dp),
                         topEnd = CornerSize(animatedTopEnd.toInt().dp),
                         bottomEnd = CornerSize(animatedBottomEnd.toInt().dp),
                         bottomStart = CornerSize(animatedBottomStart.toInt().dp),
-                        smoothness = 60
+                        smoothness = 0
                     ),
                     elevation = FloatingActionButtonDefaults.elevation(0.dp),
                     containerColor = containerColor,
@@ -497,7 +500,7 @@ private fun BackgroundPage(
 
     BouncyCard(
         onClick = {},
-        shape = AbsoluteSmoothCornerShape(24.dp, 60),
+        shape = AbsoluteSmoothCornerShape(16.dp, 60),
         colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
@@ -529,7 +532,7 @@ private fun BackgroundPage(
 
     BouncyCard(
         onClick = {},
-        shape = AbsoluteSmoothCornerShape(24.dp, 60),
+        shape = AbsoluteSmoothCornerShape(16.dp, 60),
         colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
@@ -570,7 +573,7 @@ private fun DisclaimerPage(accepted: Boolean, onAccepted: (Boolean) -> Unit) {
     Spacer(Modifier.height(32.dp))
     BouncyCard(
         onClick = {},
-        shape = AbsoluteSmoothCornerShape(24.dp, 60),
+        shape = AbsoluteSmoothCornerShape(16.dp, 60),
         colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
@@ -578,15 +581,23 @@ private fun DisclaimerPage(accepted: Boolean, onAccepted: (Boolean) -> Unit) {
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
             Text(
-                text = "Disclaimer",
+                text = "Important Notice",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.error
             )
             Spacer(Modifier.height(16.dp))
             Text(
-                text = "ProjectDreams is an independent, fan-made downloader and is NOT affiliated with, endorsed by, or connected to COVER Corp or QualiArts in any way, shape or form.\n\n" +
-                    "hololive Dreams is 100% owned by COVER Corp and QualiArts, and all rights to the game and its content belong to them. This project makes no revenue or profit from it, and hosts no copyrighted content — the app is downloaded directly from the official Google Play servers.\n\n" +
-                    "All trademarks, logos and names are the property of their respective owners.",
+                text = "ProjectDreams operates as an independent, community-driven client.",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "• No Affiliation: We are not endorsed by, affiliated with, or connected to COVER Corp or QualiArts in any capacity.\n" +
+                     "• Copyrights: hololive Dreams and all related intellectual property are entirely owned by COVER Corp and QualiArts.\n" +
+                     "• Delivery: This software generates no revenue. It acts solely as a direct bridge to the official Google Play servers, hosting no proprietary assets natively.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -619,7 +630,7 @@ private fun SetupMethodCard(
 ) {
     BouncyCard(
         onClick = onClick,
-        shape = AbsoluteSmoothCornerShape(24.dp, 60),
+        shape = AbsoluteSmoothCornerShape(16.dp, 60),
         colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = if (selected) {
                 MaterialTheme.colorScheme.primaryContainer
