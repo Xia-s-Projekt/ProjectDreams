@@ -512,20 +512,19 @@ private fun BackgroundPage(
     onNotificationsChanged: (Boolean) -> Unit,
     onDeleteAfterInstallChanged: (Boolean) -> Unit
 ) {
-    Spacer(Modifier.height(32.dp))
     Text(
         text = "Behavior Options",
         style = AppTypography.displayMedium.copy(fontSize = 32.sp),
         textAlign = TextAlign.Center
     )
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(8.dp))
     Text(
         text = "Tune how ProjectDreams behaves in the background.",
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center
     )
-    Spacer(Modifier.height(32.dp))
+    Spacer(Modifier.height(24.dp))
 
     BouncyCard(
         onClick = { onNotificationsChanged(!notificationsEnabled) },
@@ -570,7 +569,7 @@ private fun BackgroundPage(
         }
     }
 
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(12.dp))
 
     BouncyCard(
         onClick = { onDeleteAfterInstallChanged(!deleteAfterInstall) },
@@ -615,7 +614,7 @@ private fun BackgroundPage(
         }
     }
 
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(12.dp))
     BackgroundKillerCard()
 }
 
