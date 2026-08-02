@@ -193,7 +193,7 @@ fun AppScreen(
             }
         }
         
-        Box(modifier = Modifier.fillMaxSize().nestedScroll(nestedScrollConnection)) {
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).nestedScroll(nestedScrollConnection)) {
             androidx.compose.animation.AnimatedContent(
                 targetState = screen,
                 label = "ScreenTransition",
@@ -206,11 +206,17 @@ fun AppScreen(
                     }
                     slideIntoContainer(
                         towards = direction,
-                        animationSpec = androidx.compose.animation.core.tween(200)
+                        animationSpec = androidx.compose.animation.core.spring(
+                            stiffness = 800f,
+                            dampingRatio = 0.9f
+                        )
                     ).togetherWith(
                         slideOutOfContainer(
                             towards = direction,
-                            animationSpec = androidx.compose.animation.core.tween(200)
+                            animationSpec = androidx.compose.animation.core.spring(
+                                stiffness = 800f,
+                                dampingRatio = 0.9f
+                            )
                         )
                     )
                 }
