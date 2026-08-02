@@ -1879,7 +1879,7 @@ private fun SettingsScreen(
     var showAddGameDialog by remember { mutableStateOf(false) }
     
     if (showAddGameDialog) {
-        AddGameDialog(viewModel = viewModel, onDismiss = { showAddGameDialog = false })
+        AddGameBottomSheet(viewModel = viewModel, onDismiss = { showAddGameDialog = false })
     }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -2639,137 +2639,246 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddGameDialog(
+private fun AddGameBottomSheet(
     viewModel: AppViewModel,
     onDismiss: () -> Unit
 ) {
-    var gameId by remember { mutableStateOf("") }
-    var fallbackName by remember { mutableStateOf("") }
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+    
+    var step by remember { mutableStateOf(0) }
+    var query by remember { mutableStateOf("") }
+    
+    var glApp by remember { mutableStateOf<com.aurora.gplayapi.data.models.App?>(null) }
+    var jpApp by remember { mutableStateOf<com.aurora.gplayapi.data.models.App?>(null) }
+    
     var glPackage by remember { mutableStateOf("") }
     var jpPackage by remember { mutableStateOf("") }
     
-    var searchQuery by remember { mutableStateOf("") }
     var isSearching by remember { mutableStateOf(false) }
     var searchResults by remember { mutableStateOf<List<com.aurora.gplayapi.data.models.App>>(emptyList()) }
-    var searchTarget by remember { mutableStateOf<String?>(null) } // "GL" or "JP"
     
-    val coroutineScope = rememberCoroutineScope()
-    
-    if (searchTarget != null) {
-        AlertDialog(
-            onDismissRequest = { searchTarget = null },
-            title = { Text("Search App") },
-            text = {
-                Column {
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+                .heightIn(min = 300.dp, max = 600.dp)
+        ) {
+            when (step) {
+                0 -> { // Search Game Name
+                    Text("Search Game Engine", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
+                    Text("Enter the name of the game to automatically find its global and japan packages.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(16.dp))
                     OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        label = { Text("Search Query") },
+                        value = query,
+                        onValueChange = { query = it },
+                        label = { Text("Game Title") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        trailingIcon = {
-                            IconButton(onClick = {
-                                if (searchQuery.isNotBlank()) {
+                        singleLine = true
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    Button(
+                        onClick = {
+                            if (query.isNotBlank()) {
+                                isSearching = true
+                                step = 1
+                                coroutineScope.launch {
+                                    searchResults = try {
+                                        viewModel.searchApps(query)
+                                    } catch (e: Exception) {
+                                        emptyList()
+                                    }
+                                    isSearching = false
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = query.isNotBlank()
+                    ) {
+                        Text("Search Play Store")
+                    }
+                }
+                1 -> { // Search Loading or Confirm GL
+                    Text("Global Region Setup", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
+                    if (isSearching) {
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    } else if (searchResults.isEmpty()) {
+                        Text("No results found.", color = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.height(16.dp))
+                        Button(onClick = { step = 0 }) { Text("Go Back") }
+                    } else {
+                        val topApp = searchResults.first()
+                        Text("Is this the correct Global app?", fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(16.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clip(AbsoluteSmoothCornerShape(12.dp, 60)).background(MaterialTheme.colorScheme.surfaceVariant).padding(12.dp)) {
+                            if (topApp.iconArtwork?.url != null) {
+                                AsyncImage(model = topApp.iconArtwork!!.url, contentDescription = null, modifier = Modifier.size(48.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)))
+                                Spacer(Modifier.width(12.dp))
+                            }
+                            Column {
+                                Text(topApp.displayName ?: "", fontWeight = FontWeight.Bold)
+                                Text(topApp.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Spacer(Modifier.height(24.dp))
+                        Button(
+                            onClick = {
+                                glApp = topApp
+                                glPackage = topApp.packageName
+                                step = 3 // go to JP search
+                                isSearching = true
+                                coroutineScope.launch {
+                                    searchResults = try { viewModel.searchApps("$query jp") } catch (e: Exception) { emptyList() }
+                                    isSearching = false
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Yes, continue") }
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = { step = 2 }, modifier = Modifier.fillMaxWidth()) { Text("No, let me select from list") }
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(
+                            onClick = {
+                                glPackage = ""
+                                step = 3
+                                isSearching = true
+                                coroutineScope.launch {
+                                    searchResults = try { viewModel.searchApps("$query jp") } catch (e: Exception) { emptyList() }
+                                    isSearching = false
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Remove Global Region (JP Only)") }
+                    }
+                }
+                2 -> { // Pick GL from list
+                    Text("Select Global App", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
+                    androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(searchResults.size) { i ->
+                            val app = searchResults[i]
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    glApp = app
+                                    glPackage = app.packageName
+                                    step = 3
                                     isSearching = true
                                     coroutineScope.launch {
-                                        searchResults = try {
-                                            viewModel.searchApps(searchQuery)
-                                        } catch (e: Exception) {
-                                            emptyList()
-                                        }
+                                        searchResults = try { viewModel.searchApps("$query jp") } catch (e: Exception) { emptyList() }
                                         isSearching = false
                                     }
+                                }.padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (app.iconArtwork?.url != null) {
+                                    AsyncImage(model = app.iconArtwork!!.url, contentDescription = null, modifier = Modifier.size(40.dp).clip(AbsoluteSmoothCornerShape(8.dp, 60)))
+                                    Spacer(Modifier.width(12.dp))
                                 }
-                            }) {
-                                Icon(androidx.compose.material.icons.Icons.Filled.Search, contentDescription = "Search")
+                                Column {
+                                    Text(app.displayName ?: "", fontWeight = FontWeight.Bold, maxLines = 1)
+                                    Text(app.packageName, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                                }
                             }
                         }
-                    )
-                    Spacer(Modifier.height(8.dp))
+                    }
+                }
+                3 -> { // Confirm JP
+                    Text("Japan Region Setup", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
                     if (isSearching) {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    } else if (searchResults.isEmpty()) {
+                        Text("No JP results found.", color = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.height(16.dp))
+                        Button(onClick = { jpPackage = ""; step = 5 }) { Text("Skip Japan Region") }
                     } else {
-                        androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
-                            items(searchResults.size) { i ->
-                                val app = searchResults[i]
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            if (searchTarget == "GL") glPackage = app.packageName
-                                            else if (searchTarget == "JP") jpPackage = app.packageName
-                                            if (fallbackName.isBlank()) fallbackName = app.displayName ?: ""
-                                            if (gameId.isBlank()) gameId = app.packageName.substringAfterLast(".")
-                                            searchTarget = null
-                                            searchResults = emptyList()
-                                        }
-                                        .padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (app.iconArtwork?.url != null) {
-                                        AsyncImage(
-                                            model = app.iconArtwork!!.url,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(40.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                    }
-                                    Column {
-                                        Text(app.displayName ?: "", fontWeight = FontWeight.Bold, maxLines = 1)
-                                        Text(app.packageName, style = MaterialTheme.typography.bodySmall, maxLines = 1)
-                                    }
+                        val topApp = searchResults.first()
+                        Text("Is this the correct Japan app?", fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(16.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clip(AbsoluteSmoothCornerShape(12.dp, 60)).background(MaterialTheme.colorScheme.surfaceVariant).padding(12.dp)) {
+                            if (topApp.iconArtwork?.url != null) {
+                                AsyncImage(model = topApp.iconArtwork!!.url, contentDescription = null, modifier = Modifier.size(48.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)))
+                                Spacer(Modifier.width(12.dp))
+                            }
+                            Column {
+                                Text(topApp.displayName ?: "", fontWeight = FontWeight.Bold)
+                                Text(topApp.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Spacer(Modifier.height(24.dp))
+                        Button(onClick = { jpApp = topApp; jpPackage = topApp.packageName; step = 5 }, modifier = Modifier.fillMaxWidth()) { Text("Yes, finish") }
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = { step = 4 }, modifier = Modifier.fillMaxWidth()) { Text("No, let me select from list") }
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = { jpPackage = ""; step = 5 }, modifier = Modifier.fillMaxWidth()) { Text("Remove Japan Region (GL Only)") }
+                    }
+                }
+                4 -> { // Pick JP from list
+                    Text("Select Japan App", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
+                    androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(searchResults.size) { i ->
+                            val app = searchResults[i]
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    jpApp = app
+                                    jpPackage = app.packageName
+                                    step = 5
+                                }.padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (app.iconArtwork?.url != null) {
+                                    AsyncImage(model = app.iconArtwork!!.url, contentDescription = null, modifier = Modifier.size(40.dp).clip(AbsoluteSmoothCornerShape(8.dp, 60)))
+                                    Spacer(Modifier.width(12.dp))
+                                }
+                                Column {
+                                    Text(app.displayName ?: "", fontWeight = FontWeight.Bold, maxLines = 1)
+                                    Text(app.packageName, style = MaterialTheme.typography.bodySmall, maxLines = 1)
                                 }
                             }
                         }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { searchTarget = null }) {
-                    Text("Close")
-                }
-            }
-        )
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add Game Configuration") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
-                OutlinedTextField(value = gameId, onValueChange = { gameId = it }, label = { Text("Game ID (unique)") }, singleLine = true)
-                OutlinedTextField(value = fallbackName, onValueChange = { fallbackName = it }, label = { Text("Display Name") }, singleLine = true)
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(value = glPackage, onValueChange = { glPackage = it }, label = { Text("Global Package") }, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { searchTarget = "GL" }) {
-                        Icon(androidx.compose.material.icons.Icons.Filled.Search, contentDescription = "Search")
+                5 -> { // Save step
+                    Text("Review Configuration", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
+                    
+                    val fallback = glApp?.displayName ?: jpApp?.displayName ?: query
+                    val gameId = glPackage.substringAfterLast(".").takeIf { it.isNotBlank() } ?: jpPackage.substringAfterLast(".")
+                    
+                    Text("Game Title: $fallback")
+                    Text("Game ID: $gameId")
+                    Text("Global Package: ${if (glPackage.isNotBlank()) glPackage else "None"}", color = if (glPackage.isNotBlank()) Color.Unspecified else MaterialTheme.colorScheme.error)
+                    Text("Japan Package: ${if (jpPackage.isNotBlank()) jpPackage else "None"}", color = if (jpPackage.isNotBlank()) Color.Unspecified else MaterialTheme.colorScheme.error)
+                    
+                    Spacer(Modifier.height(32.dp))
+                    Button(
+                        onClick = {
+                            viewModel.addGameConfig(Game(gameId, glPackage, jpPackage, fallback))
+                            viewModel.loadAllGames()
+                            coroutineScope.launch {
+                                sheetState.hide()
+                                onDismiss()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = glPackage.isNotBlank() || jpPackage.isNotBlank()
+                    ) {
+                        Text("Save Configuration")
                     }
                 }
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(value = jpPackage, onValueChange = { jpPackage = it }, label = { Text("Japan Package") }, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { searchTarget = "JP" }) {
-                        Icon(androidx.compose.material.icons.Icons.Filled.Search, contentDescription = "Search")
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                if (gameId.isNotBlank() && (glPackage.isNotBlank() || jpPackage.isNotBlank())) {
-                    viewModel.addGameConfig(Game(gameId, glPackage, jpPackage, fallbackName.ifBlank { gameId }))
-                    viewModel.loadAllGames()
-                    onDismiss()
-                }
-            }) {
-                Text("Save Game")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
             }
         }
-    )
+    }
 }
