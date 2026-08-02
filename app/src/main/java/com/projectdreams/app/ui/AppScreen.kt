@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PlayArrow
@@ -159,16 +160,25 @@ fun AppScreen(
         BackHandler(enabled = screen != Screen.Main) {
             screen = if (screen == Screen.CheckUpdates) Screen.Settings else Screen.Main
         }
-        when (screen) {
-            Screen.Main -> MainContent(viewModel, onOpenSettings = { screen = Screen.Settings })
-            Screen.Settings -> SettingsScreen(
-                viewModel,
-                onBack = { screen = Screen.Main },
-                onOpenCheckUpdates = { screen = Screen.CheckUpdates }
-            )
-            Screen.CheckUpdates -> CheckUpdatesScreen(
-                viewModel,
-                onBack = { screen = Screen.Settings }
+        
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (screen) {
+                Screen.Main -> MainContent(viewModel)
+                Screen.Settings -> SettingsScreen(
+                    viewModel,
+                    onBack = { screen = Screen.Main },
+                    onOpenCheckUpdates = { screen = Screen.CheckUpdates }
+                )
+                Screen.CheckUpdates -> CheckUpdatesScreen(
+                    viewModel,
+                    onBack = { screen = Screen.Settings }
+                )
+            }
+            
+            FloatingNavBar(
+                currentScreen = screen,
+                onNavigate = { screen = it },
+                modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
     }
@@ -176,7 +186,7 @@ fun AppScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MainContent(viewModel: AppViewModel, onOpenSettings: () -> Unit) {
+private fun MainContent(viewModel: AppViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val installState by viewModel.installState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
@@ -194,15 +204,7 @@ private fun MainContent(viewModel: AppViewModel, onOpenSettings: () -> Unit) {
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent
-                ),
-                actions = {
-                    BouncyIconButton(onClick = { viewModel.loadApp() }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
-                    }
-                    BouncyIconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
-                    }
-                }
+                )
             )
         }
     ) { padding ->
@@ -1862,3 +1864,63 @@ private val PRESET_INTERVALS = listOf(
     168L to "Every week",
     720L to "Every month"
 )
+
+@Composable
+private fun FloatingNavBar(
+    currentScreen: Screen,
+    onNavigate: (Screen) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.material3.Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = AbsoluteSmoothCornerShape(999.dp, 60),
+        modifier = modifier.padding(bottom = 24.dp),
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            NavBarItem(
+                icon = Icons.Filled.Home,
+                label = "Home",
+                selected = currentScreen == Screen.Main,
+                onClick = { onNavigate(Screen.Main) }
+            )
+            NavBarItem(
+                icon = Icons.Filled.Settings,
+                label = "Settings",
+                selected = currentScreen == Screen.Settings || currentScreen == Screen.CheckUpdates,
+                onClick = { onNavigate(Screen.Settings) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun NavBarItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+    val contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    
+    Row(
+        modifier = Modifier
+            .clip(AbsoluteSmoothCornerShape(999.dp, 60))
+            .background(backgroundColor)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = label, tint = contentColor)
+        androidx.compose.animation.AnimatedVisibility(visible = selected) {
+            Row {
+                Spacer(Modifier.width(8.dp))
+                Text(label, style = MaterialTheme.typography.labelLarge, color = contentColor, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
