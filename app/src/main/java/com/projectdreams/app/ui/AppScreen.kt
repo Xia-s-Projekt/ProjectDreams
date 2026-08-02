@@ -380,33 +380,42 @@ private fun AppDetailView(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.Start
     ) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(16.dp))
 
         // App header
-        AsyncImage(
-            model = app.iconArtwork?.url,
-            contentDescription = app.displayName,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .size(112.dp)
-                .clip(AbsoluteSmoothCornerShape(24.dp, 60))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = app.displayName,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = app.developerName,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                model = app.iconArtwork?.url,
+                contentDescription = app.displayName,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(AbsoluteSmoothCornerShape(20.dp, 60))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            )
+            Spacer(Modifier.width(20.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = app.displayName,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = app.developerName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
 
         Spacer(Modifier.height(20.dp))
 
@@ -463,19 +472,31 @@ private fun AppDetailView(
         // Changelog
         if (app.changes.isNotBlank()) {
             SectionTitle("What's new")
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = formatRichText(app.changes),
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = if (changelogExpanded) Int.MAX_VALUE else 4,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (!changelogExpanded) {
-                BouncyTextButton(onClick = { changelogExpanded = true }) {
-                    Text("Show more")
+            Spacer(Modifier.height(12.dp))
+            androidx.compose.material3.Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = formatRichText(app.changes),
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = if (changelogExpanded) Int.MAX_VALUE else 4,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (!changelogExpanded) {
+                        Spacer(Modifier.height(8.dp))
+                        BouncyTextButton(
+                            onClick = { changelogExpanded = true },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("Show more")
+                        }
+                    }
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(32.dp))
         }
 
         // Screenshots
@@ -484,7 +505,7 @@ private fun AppDetailView(
             Spacer(Modifier.height(12.dp))
             val urls = app.screenshots.map { it.url }
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(horizontal = 2.dp)
             ) {
                 items(urls.size) { index ->
@@ -493,42 +514,44 @@ private fun AppDetailView(
                         contentDescription = "Screenshot ${index + 1}",
                         contentScale = ContentScale.FillHeight,
                         modifier = Modifier
-                            .height(260.dp)
-                            .width(120.dp)
-                            .clip(AbsoluteSmoothCornerShape(16.dp, 60))
+                            .height(300.dp)
+                            .width(140.dp)
+                            .clip(AbsoluteSmoothCornerShape(20.dp, 60))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { fullscreenScreenshot = urls to index }
                     )
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(32.dp))
         }
 
         // Description
         if (app.description.isNotBlank()) {
             SectionTitle("About this app")
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
             Text(
                 text = formatRichText(app.description),
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = if (descriptionExpanded) Int.MAX_VALUE else 6,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 4.dp)
             )
             if (!descriptionExpanded) {
+                Spacer(Modifier.height(4.dp))
                 BouncyTextButton(onClick = { descriptionExpanded = true }) {
                     Text("Show more")
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(32.dp))
         }
 
         Spacer(Modifier.height(24.dp))
         Text(
             text = "Xia Projekt",
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(32.dp))
     }
 
     if (showUninstallDialog) {
