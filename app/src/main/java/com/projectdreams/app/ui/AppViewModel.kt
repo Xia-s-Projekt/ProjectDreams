@@ -451,6 +451,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun clearDownloads() {
         viewModelScope.launch {
             app.downloadManager.clearDownloads(trackedPackage())
+            refreshResumeInfo()
             toast("Downloads cleared")
         }
     }

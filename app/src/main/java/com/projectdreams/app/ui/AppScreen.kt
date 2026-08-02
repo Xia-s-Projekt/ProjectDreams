@@ -1324,18 +1324,115 @@ private fun InstallAction(
                     Text("Open", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
             } else {
-                BouncyButton(
-                    onClick = onInstall,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = AbsoluteSmoothCornerShape(16.dp, 60)
-                ) {
-                    if (canResume) {
-                        Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Continue", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    } else {
+                var showDeleteConfirm by remember { mutableStateOf(false) }
+
+                if (canResume) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        BouncyButton(
+                            onClick = onInstall,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp),
+                            shape = AbsoluteSmoothCornerShape(16.dp, 60)
+                        ) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Continue", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        }
+                        BouncyOutlinedButton(
+                            onClick = { showDeleteConfirm = true },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp),
+                            shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(Icons.Filled.Delete, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Delete", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    if (showDeleteConfirm) {
+                        AlertDialog(
+                            onDismissRequest = { showDeleteConfirm = false },
+                            shape = AbsoluteSmoothCornerShape(24.dp, 60),
+                            icon = {
+                                androidx.compose.material3.Surface(
+                                    shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                                    color = MaterialTheme.colorScheme.errorContainer,
+                                    modifier = Modifier.size(56.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            androidx.compose.material.icons.Icons.Filled.Delete,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            title = {
+                                Text(
+                                    text = "Delete Downloaded Files?",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            },
+                            text = {
+                                Text(
+                                    text = "This will permanently remove all partially downloaded files for this app. You will need to start the download from the beginning.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            },
+                            confirmButton = {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    BouncyOutlinedButton(
+                                        onClick = { showDeleteConfirm = false },
+                                        modifier = Modifier.weight(1f).height(44.dp),
+                                        shape = AbsoluteSmoothCornerShape(14.dp, 60)
+                                    ) {
+                                        Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
+                                    }
+                                    BouncyButton(
+                                        onClick = {
+                                            showDeleteConfirm = false
+                                            viewModel.clearDownloads()
+                                        },
+                                        modifier = Modifier.weight(1f).height(44.dp),
+                                        shape = AbsoluteSmoothCornerShape(14.dp, 60),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.error,
+                                            contentColor = MaterialTheme.colorScheme.onError
+                                        )
+                                    ) {
+                                        Text("Delete", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            },
+                            dismissButton = {}
+                        )
+                    }
+                } else {
+                    BouncyButton(
+                        onClick = onInstall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = AbsoluteSmoothCornerShape(16.dp, 60)
+                    ) {
                         Icon(Icons.Filled.Download, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text(
