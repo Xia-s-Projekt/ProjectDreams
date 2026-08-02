@@ -118,6 +118,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         app.settingsRepository.setGame(game)
         loadApp()
     }
+    
+    fun removeGame(game: com.projectdreams.app.data.Game) {
+        app.settingsRepository.removeGame(game)
+    }
+    
     val confirmInstallMethod = app.settingsRepository.confirmInstallMethod
     val deleteAfterInstall = app.settingsRepository.deleteAfterInstall
     val rootAvailable = app.installManager.rootAvailable

@@ -2512,21 +2512,25 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
     val scrollState = androidx.compose.foundation.lazy.rememberLazyListState()
     val context = LocalContext.current
     
-    var installedGames by remember { mutableStateOf<List<Pair<Game, String>>>(emptyList()) }
+    var libraryItems by remember { mutableStateOf<List<Triple<com.projectdreams.app.data.Game, String, Boolean>>>(emptyList()) }
     var packageToUninstall by remember { mutableStateOf<String?>(null) }
     var appNameToUninstall by remember { mutableStateOf<String>("") }
+    var gameToRemove by remember { mutableStateOf<com.projectdreams.app.data.Game?>(null) }
     
     LaunchedEffect(allGames) {
-        val list = mutableListOf<Pair<Game, String>>()
+        val list = mutableListOf<Triple<com.projectdreams.app.data.Game, String, Boolean>>()
         for (game in allGames) {
-            if (InstalledAppInfo.installedVersion(context, game.glPackage) != null) {
-                list.add(game to game.glPackage)
-            }
-            if (InstalledAppInfo.installedVersion(context, game.jpPackage) != null) {
-                list.add(game to game.jpPackage)
+            val glInstalled = InstalledAppInfo.installedVersion(context, game.glPackage) != null
+            val jpInstalled = InstalledAppInfo.installedVersion(context, game.jpPackage) != null
+            
+            if (glInstalled) list.add(Triple(game, game.glPackage, true))
+            if (jpInstalled) list.add(Triple(game, game.jpPackage, true))
+            
+            if (!glInstalled && !jpInstalled) {
+                list.add(Triple(game, game.glPackage, false))
             }
         }
-        installedGames = list
+        libraryItems = list
     }
 
     val hazeState = remember { dev.chrisbanes.haze.HazeState() }
@@ -2554,6 +2558,16 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
     val accentColor = androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, colorPhase)
 
     Scaffold(
+        floatingActionButton = {
+            androidx.compose.material3.FloatingActionButton(
+                onClick = { onNavigate(Screen.AddGame) },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                shape = AbsoluteSmoothCornerShape(16.dp, 60)
+            ) {
+                Icon(androidx.compose.material.icons.Icons.Filled.Add, contentDescription = "Add Game")
+            }
+        },
         topBar = {
             LargeTopAppBar(
                 title = { 
@@ -2594,9 +2608,9 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                 .haze(state = hazeState)
                 .padding(padding)
         ) {
-            if (installedGames.isEmpty()) {
+            if (libraryItems.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No games installed yet.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
+                    Text("No games tracked yet.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
                 }
             } else {
                 androidx.compose.foundation.lazy.LazyColumn(
@@ -2605,8 +2619,8 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
-                    items(installedGames.size) { index ->
-                        val (game, pkg) = installedGames[index]
+                    items(libraryItems.size) { index ->
+                        val (game, pkg, isInstalled) = libraryItems[index]
                         val isGl = pkg == game.glPackage
                         val regionLabel = if (isGl) "Global" else "Japan"
                         val detail = gameDetails[game]
@@ -2616,11 +2630,16 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(AbsoluteSmoothCornerShape(20.dp, 60))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isInstalled) 0.6f else 0.3f))
                                 .clickable {
-                                    val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                                    intent.data = android.net.Uri.parse("package:$pkg")
-                                    context.startActivity(intent)
+                                    if (isInstalled) {
+                                        val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                        intent.data = android.net.Uri.parse("package:$pkg")
+                                        context.startActivity(intent)
+                                    } else {
+                                        viewModel.setGame(game)
+                                        onNavigate(Screen.Main)
+                                    }
                                 }
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -2629,7 +2648,8 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                 AsyncImage(
                                     model = detail.iconArtwork!!.url,
                                     contentDescription = null,
-                                    modifier = Modifier.size(56.dp).clip(AbsoluteSmoothCornerShape(14.dp, 60))
+                                    modifier = Modifier.size(56.dp).clip(AbsoluteSmoothCornerShape(14.dp, 60)),
+                                    alpha = if (isInstalled) 1f else 0.5f
                                 )
                                 Spacer(Modifier.width(16.dp))
                             }
@@ -2639,13 +2659,14 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isInstalled) 1f else 0.5f)
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    text = "$regionLabel Region",
+                                    text = "$regionLabel Region" + if (isInstalled) "" else " (Not Installed)",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (isInstalled) 1f else 0.5f),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -2657,29 +2678,104 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                BouncyIconButton(
-                                    onClick = {
-                                        val intent = context.packageManager.getLaunchIntentForPackage(pkg)
-                                        if (intent != null) context.startActivity(intent)
-                                    },
-                                    modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.primaryContainer)
-                                ) {
-                                    Icon(androidx.compose.material.icons.Icons.Filled.PlayArrow, contentDescription = "Open", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                                if (isInstalled) {
+                                    BouncyIconButton(
+                                        onClick = {
+                                            val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+                                            if (intent != null) context.startActivity(intent)
+                                        },
+                                        modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.primaryContainer)
+                                    ) {
+                                        Icon(androidx.compose.material.icons.Icons.Filled.PlayArrow, contentDescription = "Open", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                                    }
+                                    BouncyIconButton(
+                                        onClick = {
+                                            packageToUninstall = pkg
+                                            appNameToUninstall = displayName
+                                        },
+                                        modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
+                                    ) {
+                                        Icon(androidx.compose.material.icons.Icons.Filled.Delete, contentDescription = "Uninstall", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(20.dp))
+                                    }
+                                } else {
+                                    BouncyIconButton(
+                                        onClick = {
+                                            viewModel.setGame(game)
+                                            onNavigate(Screen.Main)
+                                        },
+                                        modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.primaryContainer)
+                                    ) {
+                                        Icon(androidx.compose.material.icons.Icons.Filled.Add, contentDescription = "Install", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                                    }
                                 }
                                 BouncyIconButton(
-                                    onClick = {
-                                        packageToUninstall = pkg
-                                        appNameToUninstall = displayName
-                                    },
-                                    modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
+                                    onClick = { gameToRemove = game },
+                                    modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.surfaceVariant)
                                 ) {
-                                    Icon(androidx.compose.material.icons.Icons.Filled.Delete, contentDescription = "Uninstall", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(20.dp))
+                                    Icon(androidx.compose.material.icons.Icons.Filled.Close, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+        
+        if (gameToRemove != null) {
+            AlertDialog(
+                onDismissRequest = { gameToRemove = null },
+                shape = AbsoluteSmoothCornerShape(24.dp, 60),
+                icon = {
+                    androidx.compose.material3.Surface(
+                        shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                androidx.compose.material.icons.Icons.Filled.Close,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                },
+                title = { Text("Stop Tracking Game?", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
+                text = { Text("This will remove the game from your library list. It will not uninstall the app from your device.", style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                confirmButton = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        BouncyOutlinedButton(
+                            onClick = { gameToRemove = null },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = AbsoluteSmoothCornerShape(14.dp, 60)
+                        ) {
+                            Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        BouncyButton(
+                            onClick = {
+                                val g = gameToRemove
+                                gameToRemove = null
+                                if (g != null) {
+                                    viewModel.removeGame(g)
+                                }
+                            },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            shape = AbsoluteSmoothCornerShape(14.dp, 60),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            )
+                        ) {
+                            Text("Remove", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                },
+                dismissButton = {}
+            )
         }
         
         if (packageToUninstall != null) {

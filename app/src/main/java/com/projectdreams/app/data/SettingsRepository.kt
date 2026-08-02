@@ -61,6 +61,29 @@ class SettingsRepository(context: Context) {
         _gamesList.value = current
     }
 
+    fun removeGame(game: Game) {
+        val current = _gamesList.value.toMutableList()
+        if (current.none { it.id == game.id }) return
+        current.removeAll { it.id == game.id }
+        
+        val jsonArray = org.json.JSONArray()
+        current.forEach { g ->
+            val obj = org.json.JSONObject()
+            obj.put("id", g.id)
+            obj.put("glPackage", g.glPackage)
+            obj.put("jpPackage", g.jpPackage)
+            obj.put("fallbackName", g.fallbackName)
+            jsonArray.put(obj)
+        }
+        gamesFile.writeText(jsonArray.toString(2))
+        _gamesList.value = current
+        
+        if (_game.value.id == game.id) {
+            val defaultGame = current.firstOrNull() ?: Game("default", "none", "none", "none")
+            setGame(defaultGame)
+        }
+    }
+
 
 
 
