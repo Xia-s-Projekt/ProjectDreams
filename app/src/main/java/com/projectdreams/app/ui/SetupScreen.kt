@@ -426,7 +426,7 @@ private fun WelcomePage() {
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            text = "Your unified gateway to regional games.",
+            text = "Cross-region package manager.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
