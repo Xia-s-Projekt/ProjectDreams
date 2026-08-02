@@ -148,6 +148,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     fun addGameConfig(game: com.projectdreams.app.data.Game) {
+        val existing = allGames.value.find { it.id == game.id || (it.glPackage.isNotBlank() && it.glPackage == game.glPackage) || (it.jpPackage.isNotBlank() && it.jpPackage == game.jpPackage) }
+        if (existing != null) {
+            app.settingsRepository.removeGame(existing)
+        }
         app.settingsRepository.addGame(game)
     }
 

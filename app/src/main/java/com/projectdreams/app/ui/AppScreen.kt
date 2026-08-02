@@ -1,5 +1,6 @@
 package com.projectdreams.app.ui
 
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Search
@@ -89,6 +90,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material.icons.filled.Edit
+import com.projectdreams.app.ui.theme.MorphingLoadingIndicator
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -119,7 +122,9 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.Animatable
@@ -440,7 +445,7 @@ private fun SetupGate(viewModel: AppViewModel) {
 @Composable
 private fun LoadingView() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
+        MorphingLoadingIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -1633,7 +1638,7 @@ private fun InstallAction(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                MorphingLoadingIndicator(modifier = Modifier.size(22.dp), color = MaterialTheme.colorScheme.onPrimary)
                 Spacer(Modifier.width(12.dp))
                 Text("Preparing…")
             }
@@ -2517,6 +2522,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
     val gameDetails by viewModel.gameDetails.collectAsStateWithLifecycle()
     val allGames by viewModel.allGames.collectAsStateWithLifecycle()
     val scrollState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     
     var libraryItems by remember { mutableStateOf<List<Triple<com.projectdreams.app.data.Game, String, Boolean>>>(emptyList()) }
@@ -2524,35 +2530,65 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
     var appNameToUninstall by remember { mutableStateOf<String>("") }
     var gameToRemove by remember { mutableStateOf<com.projectdreams.app.data.Game?>(null) }
     
-    LaunchedEffect(allGames) {
+    var searchQuery by remember { mutableStateOf("") }
+    var filterMode by remember { mutableStateOf("All") } // All, Installed, Uninstalled, GL, JP
+    var isEditMode by remember { mutableStateOf(false) }
+    
+    // FAB Scroll animation state
+    var previousIndex by remember { mutableStateOf(0) }
+    var previousScrollOffset by remember { mutableStateOf(0) }
+    var isScrollingUp by remember { mutableStateOf(true) }
+    
+    LaunchedEffect(scrollState) {
+        snapshotFlow { scrollState.firstVisibleItemIndex to scrollState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                isScrollingUp = if (index != previousIndex) {
+                    index < previousIndex
+                } else {
+                    offset <= previousScrollOffset
+                }
+                previousIndex = index
+                previousScrollOffset = offset
+            }
+    }
+    
+    LaunchedEffect(allGames, gameDetails, searchQuery, filterMode) {
         val list = mutableListOf<Triple<com.projectdreams.app.data.Game, String, Boolean>>()
         for (game in allGames) {
             val glInstalled = InstalledAppInfo.installedVersion(context, game.glPackage) != null
             val jpInstalled = InstalledAppInfo.installedVersion(context, game.jpPackage) != null
             
-            if (glInstalled) list.add(Triple(game, game.glPackage, true))
-            if (jpInstalled) list.add(Triple(game, game.jpPackage, true))
-            
-            if (!glInstalled && !jpInstalled) {
-                list.add(Triple(game, game.glPackage, false))
-            }
+            if (game.glPackage.isNotBlank()) list.add(Triple(game, game.glPackage, glInstalled))
+            if (game.jpPackage.isNotBlank()) list.add(Triple(game, game.jpPackage, jpInstalled))
+            if (game.glPackage.isBlank() && game.jpPackage.isBlank()) list.add(Triple(game, "", false))
         }
-        libraryItems = list
+        
+        var filteredList = list.filter { item ->
+            val (game, pkg, isInstalled) = item
+            val isGl = pkg == game.glPackage
+            
+            val matchSearch = if (searchQuery.isBlank()) true else {
+                val displayName = gameDetails[game]?.displayName ?: game.fallbackName
+                displayName.contains(searchQuery, ignoreCase = true) || pkg.contains(searchQuery, ignoreCase = true)
+            }
+            
+            val matchFilter = when (filterMode) {
+                "Installed" -> isInstalled
+                "Uninstalled" -> !isInstalled
+                "GL" -> isGl
+                "JP" -> !isGl
+                else -> true
+            }
+            matchSearch && matchFilter
+        }
+        
+        filteredList = filteredList.sortedWith(compareBy({ !it.third }, { gameDetails[it.first]?.displayName ?: it.first.fallbackName }))
+        libraryItems = filteredList
     }
 
     val hazeState = remember { dev.chrisbanes.haze.HazeState() }
     
-    // Spinning geometry animation for title
     val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = androidx.compose.animation.core.tween(4000, easing = androidx.compose.animation.core.LinearEasing),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Restart
-        ),
-        label = "rotation"
-    )
     val colorPhase by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
@@ -2565,15 +2601,39 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
     val accentColor = androidx.compose.ui.graphics.lerp(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary, colorPhase)
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         floatingActionButton = {
-            androidx.compose.material3.FloatingActionButton(
-                onClick = { onNavigate(Screen.AddGame) },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = AbsoluteSmoothCornerShape(16.dp, 60),
-                modifier = Modifier.padding(end = 16.dp, bottom = 80.dp)
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isScrollingUp || scrollState.firstVisibleItemIndex == 0,
+                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(),
+                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut()
             ) {
-                Icon(androidx.compose.material.icons.Icons.Filled.Add, contentDescription = "Add Game")
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    modifier = Modifier.padding(end = 16.dp, bottom = 80.dp)
+                ) {
+                    val editRotation by androidx.compose.animation.core.animateFloatAsState(targetValue = if (isEditMode) 360f else 0f, animationSpec = androidx.compose.animation.core.spring(stiffness = 800f, dampingRatio = 0.9f))
+                    androidx.compose.material3.FloatingActionButton(
+                        onClick = { isEditMode = !isEditMode },
+                        containerColor = if (isEditMode) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = if (isEditMode) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+                        shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(modifier = Modifier.graphicsLayer { rotationZ = editRotation }) {
+                            Icon(if (isEditMode) androidx.compose.material.icons.Icons.Filled.Close else androidx.compose.material.icons.Icons.Filled.Edit, contentDescription = "Edit Mode")
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    androidx.compose.material3.FloatingActionButton(
+                        onClick = { onNavigate(Screen.AddGame) },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        shape = AbsoluteSmoothCornerShape(20.dp, 60)
+                    ) {
+                        Icon(androidx.compose.material.icons.Icons.Filled.Add, contentDescription = "Add Game")
+                    }
+                }
             }
         },
         topBar = {
@@ -2584,18 +2644,13 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                             imageVector = androidx.compose.material.icons.Icons.Filled.AutoAwesome,
                             contentDescription = null,
                             tint = accentColor,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .graphicsLayer { 
-                                    rotationZ = rotation 
-                                    scaleX = 1f + (colorPhase * 0.2f)
-                                    scaleY = 1f + (colorPhase * 0.2f)
-                                }
+                            modifier = Modifier.size(32.dp)
                         )
                         Spacer(Modifier.width(12.dp))
                         Text("Library", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineLarge) 
                     }
                 },
+                scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = Color.Transparent,
                     scrolledContainerColor = Color.Transparent
@@ -2616,120 +2671,142 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                 .haze(state = hazeState)
                 .padding(padding)
         ) {
-            if (libraryItems.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No games tracked yet.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
-                }
-            } else {
-                androidx.compose.foundation.lazy.LazyColumn(
-                    state = scrollState,
-                    contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                ) {
-                    items(libraryItems.size) { index ->
-                        val (game, pkg, isInstalled) = libraryItems[index]
-                        val isGl = pkg == game.glPackage
-                        val regionLabel = if (isGl) "Global" else "Japan"
-                        val detail = gameDetails[game]
-                        val displayName = detail?.displayName ?: game.fallbackName
-                        
-                        androidx.compose.foundation.layout.Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(AbsoluteSmoothCornerShape(20.dp, 60))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isInstalled) 0.6f else 0.3f))
-                                .clickable {
-                                    if (isInstalled) {
-                                        val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                                        intent.data = android.net.Uri.parse("package:$pkg")
-                                        context.startActivity(intent)
-                                    } else {
-                                        viewModel.setGame(game)
-                                        onNavigate(Screen.Main)
-                                    }
-                                }
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (detail?.iconArtwork?.url != null) {
-                                AsyncImage(
-                                    model = detail.iconArtwork!!.url,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(56.dp).clip(AbsoluteSmoothCornerShape(14.dp, 60)),
-                                    alpha = if (isInstalled) 1f else 0.5f
-                                )
-                                Spacer(Modifier.width(16.dp))
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = displayName,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isInstalled) 1f else 0.5f)
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = "$regionLabel Region" + if (isInstalled) "" else " (Not Installed)",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (isInstalled) 1f else 0.5f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            
-                            Spacer(Modifier.width(12.dp))
-                            
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Search & Filter Header
+                Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search library...") },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        singleLine = true,
+                        shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                        leadingIcon = { Icon(androidx.compose.material.icons.Icons.Filled.Search, contentDescription = null) }
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val filters = listOf("All", "Installed", "Uninstalled", "GL", "JP")
+                        items(filters.size) { i ->
+                            val f = filters[i]
+                            val selected = filterMode == f
+                            androidx.compose.material3.Surface(
+                                shape = AbsoluteSmoothCornerShape(12.dp, 60),
+                                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.clip(AbsoluteSmoothCornerShape(12.dp, 60)).clickable { filterMode = f }
                             ) {
-                                if (isInstalled) {
-                                    BouncyIconButton(
-                                        onClick = {
-                                            val intent = context.packageManager.getLaunchIntentForPackage(pkg)
-                                            if (intent != null) context.startActivity(intent)
-                                        },
-                                        modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.primaryContainer)
-                                    ) {
-                                        Icon(androidx.compose.material.icons.Icons.Filled.PlayArrow, contentDescription = "Open", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                                Text(f, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontWeight = FontWeight.Bold, color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            
+                if (libraryItems.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No games found.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
+                    }
+                } else {
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        state = scrollState,
+                        contentPadding = PaddingValues(bottom = 140.dp, top = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    ) {
+                        items(libraryItems.size) { index ->
+                            val (game, pkg, isInstalled) = libraryItems[index]
+                            val isGl = pkg == game.glPackage
+                            val regionLabel = if (isGl) "Global" else "Japan"
+                            val detail = gameDetails[game]
+                            val displayName = detail?.displayName ?: game.fallbackName
+                            
+                            androidx.compose.foundation.layout.Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(AbsoluteSmoothCornerShape(20.dp, 60))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isInstalled) 0.8f else 0.4f))
+                                    .clickable {
+                                        if (!isEditMode) {
+                                            if (isInstalled) {
+                                                val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+                                                if (intent != null) context.startActivity(intent)
+                                            } else {
+                                                viewModel.setGame(game)
+                                                onNavigate(Screen.Main)
+                                            }
+                                        }
                                     }
-                                    BouncyIconButton(
-                                        onClick = {
-                                            packageToUninstall = pkg
-                                            appNameToUninstall = displayName
-                                        },
-                                        modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
-                                    ) {
-                                        Icon(androidx.compose.material.icons.Icons.Filled.Delete, contentDescription = "Uninstall", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(20.dp))
-                                    }
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (detail?.iconArtwork?.url != null) {
+                                    AsyncImage(
+                                        model = detail.iconArtwork!!.url,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(56.dp).clip(AbsoluteSmoothCornerShape(14.dp, 60)),
+                                        alpha = if (isInstalled) 1f else 0.5f
+                                    )
+                                    Spacer(Modifier.width(16.dp))
                                 } else {
-                                    BouncyIconButton(
-                                        onClick = {
-                                            viewModel.setGame(game)
-                                            onNavigate(Screen.Main)
-                                        },
-                                        modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.primaryContainer)
-                                    ) {
-                                        Icon(androidx.compose.material.icons.Icons.Filled.Download, contentDescription = "Install", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                                    androidx.compose.material3.Surface(modifier = Modifier.size(56.dp), shape = AbsoluteSmoothCornerShape(14.dp, 60), color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (isInstalled) 1f else 0.5f)) {
+                                        Icon(androidx.compose.material.icons.Icons.Filled.Apps, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(12.dp))
                                     }
+                                    Spacer(Modifier.width(16.dp))
                                 }
-                                BouncyIconButton(
-                                    onClick = { 
-                                        viewModel.gameToEdit = game
-                                        onNavigate(Screen.AddGame) 
-                                    },
-                                    modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.secondaryContainer)
-                                ) {
-                                    Icon(androidx.compose.material.icons.Icons.Filled.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(20.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = displayName,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isInstalled) 1f else 0.5f)
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = "$regionLabel Region" + if (isInstalled) "" else " (Not Installed)",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (isInstalled) 1f else 0.5f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
-                                BouncyIconButton(
-                                    onClick = { gameToRemove = game },
-                                    modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.surfaceVariant)
+                                
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = isEditMode,
+                                    enter = androidx.compose.animation.expandHorizontally() + androidx.compose.animation.fadeIn(),
+                                    exit = androidx.compose.animation.shrinkHorizontally() + androidx.compose.animation.fadeOut()
                                 ) {
-                                    Icon(androidx.compose.material.icons.Icons.Filled.Close, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.padding(start = 12.dp)
+                                    ) {
+                                        if (isInstalled) {
+                                            BouncyIconButton(
+                                                onClick = {
+                                                    packageToUninstall = pkg
+                                                    appNameToUninstall = displayName
+                                                },
+                                                modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
+                                            ) {
+                                                Icon(androidx.compose.material.icons.Icons.Filled.Delete, contentDescription = "Uninstall", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(20.dp))
+                                            }
+                                        }
+                                        BouncyIconButton(
+                                            onClick = { 
+                                                viewModel.gameToEdit = game
+                                                onNavigate(Screen.AddGame) 
+                                            },
+                                            modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.secondaryContainer)
+                                        ) {
+                                            Icon(androidx.compose.material.icons.Icons.Filled.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(20.dp))
+                                        }
+                                        BouncyIconButton(
+                                            onClick = { gameToRemove = game },
+                                            modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.surfaceVariant)
+                                        ) {
+                                            Icon(androidx.compose.material.icons.Icons.Filled.Close, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                                        }
+                                    }
                                 }
                             }
                         }

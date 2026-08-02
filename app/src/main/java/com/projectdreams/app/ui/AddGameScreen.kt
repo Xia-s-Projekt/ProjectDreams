@@ -36,43 +36,9 @@ import com.projectdreams.app.ui.theme.AbsoluteSmoothCornerShape
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeChild
+import com.projectdreams.app.ui.theme.MorphingLoadingIndicator
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-
-@Composable
-fun MorphingLoadingIndicator(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary) {
-    val infiniteTransition = rememberInfiniteTransition(label = "morph")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing)
-        ), label = "rot"
-    )
-    val corner by infiniteTransition.animateFloat(
-        initialValue = 10f,
-        targetValue = 50f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = "corner"
-    )
-    Box(
-        modifier = modifier
-            .graphicsLayer { rotationZ = rotation }
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(corner.toInt()))
-            .background(color),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize(0.5f)
-                .graphicsLayer { rotationZ = -rotation * 2 }
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape((60 - corner).toInt()))
-                .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f))
-        )
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,7 +114,7 @@ fun AddGameScreen(
                                 modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                Spacer(Modifier.height(32.dp))
+                                Spacer(Modifier.height(16.dp))
                                 Surface(
                                     shape = AbsoluteSmoothCornerShape(32.dp, 60),
                                     color = MaterialTheme.colorScheme.primaryContainer,
@@ -158,11 +124,11 @@ fun AddGameScreen(
                                         Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(40.dp))
                                     }
                                 }
-                                Spacer(Modifier.height(24.dp))
+                                Spacer(Modifier.height(16.dp))
                                 Text("Search for a game", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold)
                                 Spacer(Modifier.height(12.dp))
                                 Text("Enter the title or exact package name to automatically fetch region matches.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(32.dp))
+                                Spacer(Modifier.height(24.dp))
                                 
                                 OutlinedTextField(
                                     value = query,
