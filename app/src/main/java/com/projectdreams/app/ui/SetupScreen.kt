@@ -41,6 +41,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
@@ -261,7 +262,7 @@ fun SetupBottomBar(
         shape = shape
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 14.dp)
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
         ) {
             Row(
                 modifier = Modifier
@@ -504,20 +505,32 @@ private fun BackgroundPage(
     Spacer(Modifier.height(32.dp))
 
     BouncyCard(
-        onClick = {},
+        onClick = { onNotificationsChanged(!notificationsEnabled) },
         shape = AbsoluteSmoothCornerShape(16.dp, 60),
         colors = androidx.compose.material3.CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Filled.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.size(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                modifier = Modifier.size(46.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.Notifications,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+            Spacer(Modifier.size(14.dp))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = "New version alerts",
                     style = MaterialTheme.typography.titleMedium,
@@ -529,6 +542,7 @@ private fun BackgroundPage(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            Spacer(Modifier.size(14.dp))
             BouncySwitch(checked = notificationsEnabled, onCheckedChange = onNotificationsChanged)
         }
     }
@@ -536,18 +550,32 @@ private fun BackgroundPage(
     Spacer(Modifier.height(16.dp))
 
     BouncyCard(
-        onClick = {},
+        onClick = { onDeleteAfterInstallChanged(!deleteAfterInstall) },
         shape = AbsoluteSmoothCornerShape(16.dp, 60),
         colors = androidx.compose.material3.CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                modifier = Modifier.size(46.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+            Spacer(Modifier.size(14.dp))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = "Delete after install",
                     style = MaterialTheme.typography.titleMedium,
@@ -559,6 +587,7 @@ private fun BackgroundPage(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            Spacer(Modifier.size(14.dp))
             BouncySwitch(checked = deleteAfterInstall, onCheckedChange = onDeleteAfterInstallChanged)
         }
     }

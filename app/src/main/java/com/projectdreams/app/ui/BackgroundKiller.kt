@@ -32,6 +32,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.projectdreams.app.ui.theme.BouncyCard
+import com.projectdreams.app.ui.theme.AbsoluteSmoothCornerShape
+import androidx.compose.foundation.layout.Arrangement
 
 /**
  * Asks the user to exempt ProjectDreams from battery optimization, mirroring
