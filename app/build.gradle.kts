@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("dev.chrisbanes.haze:haze:0.7.3")
     debugImplementation(libs.androidx.ui.tooling)
 
     // Google Fonts

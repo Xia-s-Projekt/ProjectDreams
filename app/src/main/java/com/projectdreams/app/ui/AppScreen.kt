@@ -109,6 +109,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.HazeStyle
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -1818,16 +1822,30 @@ private fun SettingsScreen(
     var showClearDownloadsDialog by remember { mutableStateOf(false) }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val hazeState = remember { HazeState() }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Text(
+                        "Settings", 
+                        fontWeight = FontWeight.Bold, 
+                        style = if (scrollBehavior.state.collapsedFraction < 0.5f) MaterialTheme.typography.displayMedium else MaterialTheme.typography.titleLarge
+                    ) 
+                },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent
+                ),
+                modifier = Modifier.hazeChild(
+                    state = hazeState,
+                    style = HazeStyle(
+                        tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                        blurRadius = 16.dp
+                    )
                 )
             )
         }
@@ -1835,6 +1853,7 @@ private fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .haze(state = hazeState)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(padding),
@@ -2014,12 +2033,19 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
     var editText by remember { mutableStateOf("") }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val hazeState = remember { HazeState() }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("Check for updates", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Text(
+                        "Check for updates", 
+                        fontWeight = FontWeight.Bold,
+                        style = if (scrollBehavior.state.collapsedFraction < 0.5f) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.titleLarge
+                    ) 
+                },
                 navigationIcon = {
                     BouncyIconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -2027,8 +2053,15 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent
+                ),
+                modifier = Modifier.hazeChild(
+                    state = hazeState,
+                    style = HazeStyle(
+                        tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                        blurRadius = 16.dp
+                    )
                 )
             )
         }
@@ -2036,6 +2069,7 @@ private fun CheckUpdatesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .haze(state = hazeState)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(padding),

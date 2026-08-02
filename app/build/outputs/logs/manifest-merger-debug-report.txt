@@ -23,6 +23,7 @@ MERGED from [androidx.work:work-runtime-ktx:2.10.1] /mnt/project/Android/.gradle
 MERGED from [androidx.work:work-runtime:2.10.1] /mnt/project/Android/.gradle/caches/9.5.0/transforms/dddb18da93276e5b69f3532fd36f128a/transformed/work-runtime-2.10.1/AndroidManifest.xml:17:1-145:12
 MERGED from [androidx.compose.material3:material3-android:1.4.0] /mnt/project/Android/.gradle/caches/9.5.0/transforms/c4f2eed1ed88127eec84b6ca70c7f1ab/transformed/material3/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.compose.material:material-ripple-android:1.11.4] /mnt/project/Android/.gradle/caches/9.5.0/transforms/827aab78b5bea1f14271000516476aa9/transformed/material-ripple/AndroidManifest.xml:2:1-7:12
+MERGED from [dev.chrisbanes.haze:haze-android:0.7.3] /mnt/project/Android/.gradle/caches/9.5.0/transforms/4138b0b1a7825c2fd0b1d317dab0e7ec/transformed/haze-release/AndroidManifest.xml:2:1-7:12
 MERGED from [io.coil-kt.coil3:coil-compose-android:3.5.0] /mnt/project/Android/.gradle/caches/9.5.0/transforms/95290f7ec9c884f64e0db01325e9deba/transformed/coil-compose/AndroidManifest.xml:2:1-7:12
 MERGED from [io.coil-kt.coil3:coil-compose-core-android:3.5.0] /mnt/project/Android/.gradle/caches/9.5.0/transforms/21ff950d8811baeb72d18d8207a46955/transformed/coil-compose-core/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.foundation:foundation-android:1.11.4] /mnt/project/Android/.gradle/caches/9.5.0/transforms/01da4fde1730337d35874f878d88f15b/transformed/foundation/AndroidManifest.xml:2:1-7:12
@@ -229,6 +230,8 @@ MERGED from [androidx.compose.material3:material3-android:1.4.0] /mnt/project/An
 MERGED from [androidx.compose.material3:material3-android:1.4.0] /mnt/project/Android/.gradle/caches/9.5.0/transforms/c4f2eed1ed88127eec84b6ca70c7f1ab/transformed/material3/AndroidManifest.xml:20:5-44
 MERGED from [androidx.compose.material:material-ripple-android:1.11.4] /mnt/project/Android/.gradle/caches/9.5.0/transforms/827aab78b5bea1f14271000516476aa9/transformed/material-ripple/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.material:material-ripple-android:1.11.4] /mnt/project/Android/.gradle/caches/9.5.0/transforms/827aab78b5bea1f14271000516476aa9/transformed/material-ripple/AndroidManifest.xml:5:5-44
+MERGED from [dev.chrisbanes.haze:haze-android:0.7.3] /mnt/project/Android/.gradle/caches/9.5.0/transforms/4138b0b1a7825c2fd0b1d317dab0e7ec/transformed/haze-release/AndroidManifest.xml:5:5-44
+MERGED from [dev.chrisbanes.haze:haze-android:0.7.3] /mnt/project/Android/.gradle/caches/9.5.0/transforms/4138b0b1a7825c2fd0b1d317dab0e7ec/transformed/haze-release/AndroidManifest.xml:5:5-44
 MERGED from [io.coil-kt.coil3:coil-compose-android:3.5.0] /mnt/project/Android/.gradle/caches/9.5.0/transforms/95290f7ec9c884f64e0db01325e9deba/transformed/coil-compose/AndroidManifest.xml:5:5-44
 MERGED from [io.coil-kt.coil3:coil-compose-android:3.5.0] /mnt/project/Android/.gradle/caches/9.5.0/transforms/95290f7ec9c884f64e0db01325e9deba/transformed/coil-compose/AndroidManifest.xml:5:5-44
 MERGED from [io.coil-kt.coil3:coil-compose-core-android:3.5.0] /mnt/project/Android/.gradle/caches/9.5.0/transforms/21ff950d8811baeb72d18d8207a46955/transformed/coil-compose-core/AndroidManifest.xml:5:5-44
