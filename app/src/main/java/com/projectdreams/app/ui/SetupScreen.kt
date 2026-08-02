@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -484,7 +485,12 @@ private fun MethodPage(
         icon = Icons.Filled.Android,
         available = shizukuAvailable,
         selected = selectedMode == InstallManager.Mode.SHIZUKU,
-        onClick = { onSelectMode(InstallManager.Mode.SHIZUKU) },
+        onClick = {
+            onSelectMode(InstallManager.Mode.SHIZUKU)
+            if (!shizukuAvailable) {
+                onRequestShizuku()
+            }
+        },
         trailing = {
             if (selectedMode == InstallManager.Mode.SHIZUKU && !shizukuAvailable) {
                 BouncyTextButton(onClick = onRequestShizuku) {
@@ -494,14 +500,37 @@ private fun MethodPage(
         }
     )
 
-    if (selectedMode == InstallManager.Mode.ROOT && !rootAvailable) {
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = "Root is not granted to this app yet. Install a root manager and grant access, or pick Shizuku instead.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-            textAlign = TextAlign.Center
-        )
+    androidx.compose.animation.AnimatedVisibility(
+        visible = selectedMode == InstallManager.Mode.ROOT && !rootAvailable,
+        enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+        exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+    ) {
+        Column {
+            Spacer(Modifier.height(16.dp))
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.size(12.dp))
+                    Text(
+                        text = "Root is not granted to this app yet. Install a root manager and grant access, or pick Shizuku instead.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
     }
 }
 
