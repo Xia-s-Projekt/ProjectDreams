@@ -66,6 +66,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Dataset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -882,7 +888,7 @@ private fun InstallFailedDialog(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        androidx.compose.material.icons.Icons.Filled.Warning,
+                        Icons.Filled.Warning,
                         contentDescription = null,
                         tint = onContainerColor,
                         modifier = Modifier.size(28.dp)
@@ -1153,7 +1159,7 @@ private fun MethodRadioRow(
             }
             if (selected) {
                 Icon(
-                    androidx.compose.material.icons.Icons.Filled.CheckCircle,
+                    Icons.Filled.CheckCircle,
                     contentDescription = "Selected",
                     tint = contentColor
                 )
@@ -2009,7 +2015,7 @@ private fun SettingsScreen(
             PreferenceRow(
                 title = "Add Game",
                 subtitle = "Search and configure a new game to manage",
-                icon = androidx.compose.material.icons.Icons.Filled.Add,
+                icon = Icons.Filled.Add,
                 iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
                 iconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 onClick = onNavigateToAddGame
@@ -2391,7 +2397,7 @@ private fun FloatingNavBar(
                 onClick = { onNavigate(Screen.Main) }
             )
             NavBarItem(
-                icon = androidx.compose.material.icons.Icons.Filled.Apps,
+                icon = Icons.Filled.Apps,
                 label = "Library",
                 selected = currentScreen == Screen.GameManager,
                 onClick = { onNavigate(Screen.GameManager) }
@@ -2531,7 +2537,8 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
     var gameToRemove by remember { mutableStateOf<com.projectdreams.app.data.Game?>(null) }
     
     var searchQuery by remember { mutableStateOf("") }
-    var filterMode by remember { mutableStateOf("All") } // All, Installed, Uninstalled, GL, JP
+    var installFilter by remember { mutableStateOf("All") }
+    var regionFilter by remember { mutableStateOf("All") }
     var isEditMode by remember { mutableStateOf(false) }
     
     // FAB Scroll animation state
@@ -2552,7 +2559,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
             }
     }
     
-    LaunchedEffect(allGames, gameDetails, searchQuery, filterMode) {
+    LaunchedEffect(allGames, gameDetails, searchQuery, installFilter, regionFilter) {
         val list = mutableListOf<Triple<com.projectdreams.app.data.Game, String, Boolean>>()
         for (game in allGames) {
             val glInstalled = InstalledAppInfo.installedVersion(context, game.glPackage) != null
@@ -2572,14 +2579,17 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                 displayName.contains(searchQuery, ignoreCase = true) || pkg.contains(searchQuery, ignoreCase = true)
             }
             
-            val matchFilter = when (filterMode) {
+            val matchInstall = when (installFilter) {
                 "Installed" -> isInstalled
                 "Uninstalled" -> !isInstalled
+                else -> true
+            }
+            val matchRegion = when (regionFilter) {
                 "GL" -> isGl
                 "JP" -> !isGl
                 else -> true
             }
-            matchSearch && matchFilter
+            matchSearch && matchInstall && matchRegion
         }
         
         filteredList = filteredList.sortedWith(compareBy({ !it.third }, { gameDetails[it.first]?.displayName ?: it.first.fallbackName }))
@@ -2621,7 +2631,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                         modifier = Modifier.size(48.dp)
                     ) {
                         Box(modifier = Modifier.graphicsLayer { rotationZ = editRotation }) {
-                            Icon(if (isEditMode) androidx.compose.material.icons.Icons.Filled.Close else androidx.compose.material.icons.Icons.Filled.Edit, contentDescription = "Edit Mode")
+                            Icon(if (isEditMode) Icons.Filled.Close else Icons.Filled.Edit, contentDescription = "Edit Mode")
                         }
                     }
                     Spacer(Modifier.height(16.dp))
@@ -2631,7 +2641,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         shape = AbsoluteSmoothCornerShape(20.dp, 60)
                     ) {
-                        Icon(androidx.compose.material.icons.Icons.Filled.Add, contentDescription = "Add Game")
+                        Icon(Icons.Filled.Add, contentDescription = "Add Game")
                     }
                 }
             }
@@ -2641,7 +2651,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                 title = { 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Filled.AutoAwesome,
+                            imageVector = Icons.Filled.AutoAwesome,
                             contentDescription = null,
                             tint = accentColor,
                             modifier = Modifier.size(32.dp)
@@ -2681,21 +2691,89 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         singleLine = true,
                         shape = AbsoluteSmoothCornerShape(16.dp, 60),
-                        leadingIcon = { Icon(androidx.compose.material.icons.Icons.Filled.Search, contentDescription = null) }
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) }
                     )
                     Spacer(Modifier.height(12.dp))
-                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val filters = listOf("All", "Installed", "Uninstalled", "GL", "JP")
-                        items(filters.size) { i ->
-                            val f = filters[i]
-                            val selected = filterMode == f
-                            androidx.compose.material3.Surface(
-                                shape = AbsoluteSmoothCornerShape(12.dp, 60),
-                                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.clip(AbsoluteSmoothCornerShape(12.dp, 60)).clickable { filterMode = f }
-                            ) {
-                                Text(f, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontWeight = FontWeight.Bold, color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Library Filters",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        
+                        // Region Filter Button
+                        val regionIcon = when(regionFilter) {
+                            "All" -> Icons.Filled.Public
+                            "GL" -> Icons.Filled.Language
+                            "JP" -> Icons.Filled.Translate
+                            else -> Icons.Filled.Public
+                        }
+                        val regionTooltip = when(regionFilter) {
+                            "All" -> "All Regions"
+                            "GL" -> "Global Region"
+                            "JP" -> "Japan Region"
+                            else -> "All Regions"
+                        }
+                        
+                        androidx.compose.material3.FilledTonalIconButton(
+                            onClick = { 
+                                regionFilter = when(regionFilter) {
+                                    "All" -> "GL"
+                                    "GL" -> "JP"
+                                    else -> "All"
+                                }
+                            },
+                            shape = AbsoluteSmoothCornerShape(
+                                androidx.compose.foundation.shape.CornerSize(26.dp),
+                                androidx.compose.foundation.shape.CornerSize(8.dp),
+                                androidx.compose.foundation.shape.CornerSize(8.dp),
+                                androidx.compose.foundation.shape.CornerSize(26.dp),
+                                60
+                            ),
+                            modifier = Modifier.size(42.dp)
+                        ) {
+                            Icon(regionIcon, contentDescription = regionTooltip)
+                        }
+                        
+                        Spacer(Modifier.width(4.dp))
+                        
+                        // Install Filter Button
+                        val installIcon = when(installFilter) {
+                            "All" -> Icons.Filled.Dataset
+                            "Installed" -> Icons.Filled.PhoneAndroid
+                            "Uninstalled" -> Icons.Filled.Cloud
+                            else -> Icons.Filled.Dataset
+                        }
+                        val installTooltip = when(installFilter) {
+                            "All" -> "All Storage"
+                            "Installed" -> "Installed Apps"
+                            "Uninstalled" -> "Not Installed"
+                            else -> "All Storage"
+                        }
+                        
+                        androidx.compose.material3.FilledTonalIconButton(
+                            onClick = { 
+                                installFilter = when(installFilter) {
+                                    "All" -> "Installed"
+                                    "Installed" -> "Uninstalled"
+                                    else -> "All"
+                                }
+                            },
+                            shape = AbsoluteSmoothCornerShape(
+                                androidx.compose.foundation.shape.CornerSize(8.dp),
+                                androidx.compose.foundation.shape.CornerSize(26.dp),
+                                androidx.compose.foundation.shape.CornerSize(26.dp),
+                                androidx.compose.foundation.shape.CornerSize(8.dp),
+                                60
+                            ),
+                            modifier = Modifier.size(42.dp)
+                        ) {
+                            Icon(installIcon, contentDescription = installTooltip)
                         }
                     }
                 }
@@ -2747,7 +2825,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                     Spacer(Modifier.width(16.dp))
                                 } else {
                                     androidx.compose.material3.Surface(modifier = Modifier.size(56.dp), shape = AbsoluteSmoothCornerShape(14.dp, 60), color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (isInstalled) 1f else 0.5f)) {
-                                        Icon(androidx.compose.material.icons.Icons.Filled.Apps, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(12.dp))
+                                        Icon(Icons.Filled.Apps, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(12.dp))
                                     }
                                     Spacer(Modifier.width(16.dp))
                                 }
@@ -2788,7 +2866,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                                 },
                                                 modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
                                             ) {
-                                                Icon(androidx.compose.material.icons.Icons.Filled.Delete, contentDescription = "Uninstall", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(20.dp))
+                                                Icon(Icons.Filled.Delete, contentDescription = "Uninstall", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(20.dp))
                                             }
                                         }
                                         BouncyIconButton(
@@ -2798,13 +2876,13 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                                             },
                                             modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.secondaryContainer)
                                         ) {
-                                            Icon(androidx.compose.material.icons.Icons.Filled.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(20.dp))
+                                            Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(20.dp))
                                         }
                                         BouncyIconButton(
                                             onClick = { gameToRemove = game },
                                             modifier = Modifier.size(38.dp).clip(AbsoluteSmoothCornerShape(10.dp, 60)).background(MaterialTheme.colorScheme.surfaceVariant)
                                         ) {
-                                            Icon(androidx.compose.material.icons.Icons.Filled.Close, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                                            Icon(Icons.Filled.Close, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                                         }
                                     }
                                 }
@@ -2827,7 +2905,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                androidx.compose.material.icons.Icons.Filled.Close,
+                                Icons.Filled.Close,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.size(28.dp)
@@ -2884,7 +2962,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                androidx.compose.material.icons.Icons.Filled.Delete,
+                                Icons.Filled.Delete,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.size(28.dp)
