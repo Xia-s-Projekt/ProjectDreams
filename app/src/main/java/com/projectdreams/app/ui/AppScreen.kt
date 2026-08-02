@@ -437,6 +437,20 @@ private fun AppDetailView(
                     fontWeight = FontWeight.SemiBold
                 )
             }
+            Spacer(Modifier.width(16.dp))
+            BouncyIconButton(
+                onClick = viewModel::openPlayStore,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(AbsoluteSmoothCornerShape(14.dp, 60))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Icon(
+                    Icons.Filled.OpenInNew,
+                    contentDescription = "View in Play Store",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
         }
 
         Spacer(Modifier.height(20.dp))
@@ -476,18 +490,7 @@ private fun AppDetailView(
             MetaChip(viewModel.formatSize(app.size))
             MetaChip(viewModel.formatDate(app.updatedOn))
         }
-        Spacer(Modifier.height(12.dp))
-        BouncyOutlinedButton(
-            onClick = viewModel::openPlayStore,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(44.dp),
-            shape = AbsoluteSmoothCornerShape(14.dp, 60)
-        ) {
-            Icon(Icons.Filled.OpenInNew, contentDescription = null)
-            Spacer(Modifier.width(6.dp))
-            Text("View in Play Store")
-        }
+
 
         Spacer(Modifier.height(24.dp))
 
