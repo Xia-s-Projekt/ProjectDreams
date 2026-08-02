@@ -1,5 +1,8 @@
 package com.projectdreams.app.ui
 
+import androidx.compose.ui.platform.LocalContext
+import com.projectdreams.app.data.InstalledAppInfo
+
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -64,6 +67,7 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PlayArrow
@@ -153,7 +157,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-private enum class Screen { Main, Settings, CheckUpdates }
+private enum class Screen { Main, GameManager, Settings, CheckUpdates }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -224,6 +228,7 @@ fun AppScreen(
             ) { targetScreen ->
                 when (targetScreen) {
                     Screen.Main -> MainContent(viewModel)
+                    Screen.GameManager -> GameManagerScreen(viewModel, onNavigate = { screen = it })
                     Screen.Settings -> SettingsScreen(
                         viewModel,
                         onOpenCheckUpdates = { screen = Screen.CheckUpdates }
@@ -2275,6 +2280,12 @@ private fun FloatingNavBar(
                 onClick = { onNavigate(Screen.Main) }
             )
             NavBarItem(
+                icon = androidx.compose.material.icons.Icons.Filled.Apps,
+                label = "Library",
+                selected = currentScreen == Screen.GameManager,
+                onClick = { onNavigate(Screen.GameManager) }
+            )
+            NavBarItem(
                 icon = Icons.Filled.Settings,
                 label = "Settings",
                 selected = currentScreen == Screen.Settings || currentScreen == Screen.CheckUpdates,
@@ -2388,6 +2399,131 @@ private fun GameDropdown(
                     }
                 }
             }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> Unit) {
+    val gameDetails by viewModel.gameDetails.collectAsStateWithLifecycle()
+    val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    
+    var installedGames by remember { mutableStateOf<List<Pair<Game, String>>>(emptyList()) }
+    
+    LaunchedEffect(Unit) {
+        val list = mutableListOf<Pair<Game, String>>()
+        for (game in Game.entries) {
+            if (InstalledAppInfo.installedVersion(context, game.glPackage) != null) {
+                list.add(game to game.glPackage)
+            }
+            if (InstalledAppInfo.installedVersion(context, game.jpPackage) != null) {
+                list.add(game to game.jpPackage)
+            }
+        }
+        installedGames = list
+    }
+
+    Scaffold(
+        topBar = {
+            LargeTopAppBar(
+                title = { Text("Game Library", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            if (installedGames.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize().padding(top = 100.dp), contentAlignment = Alignment.Center) {
+                    Text("No games installed yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                installedGames.forEach { (game, pkg) ->
+                    val isGl = pkg == game.glPackage
+                    val regionLabel = if (isGl) "Global" else "Japan"
+                    val detail = gameDetails[game]
+                    
+                    SquircleCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (detail?.iconArtwork?.url != null) {
+                                    AsyncImage(
+                                        model = detail.iconArtwork!!.url,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp).clip(AbsoluteSmoothCornerShape(12.dp, 60))
+                                    )
+                                    Spacer(Modifier.width(16.dp))
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = detail?.displayName ?: game.fallbackName,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "$regionLabel Region • $pkg",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                BouncyTextButton(
+                                    onClick = {
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_DELETE)
+                                        intent.data = android.net.Uri.parse("package:$pkg")
+                                        context.startActivity(intent)
+                                    },
+                                    modifier = Modifier.clip(AbsoluteSmoothCornerShape(12.dp, 60)).background(MaterialTheme.colorScheme.errorContainer)
+                                ) {
+                                    Text("Uninstall", color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                BouncyTextButton(
+                                    onClick = {
+                                        val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+                                        if (intent != null) {
+                                            context.startActivity(intent)
+                                        } else {
+                                            android.widget.Toast.makeText(context, "Cannot open app", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    modifier = Modifier.clip(AbsoluteSmoothCornerShape(12.dp, 60)).background(MaterialTheme.colorScheme.secondaryContainer)
+                                ) {
+                                    Text("Open", color = MaterialTheme.colorScheme.onSecondaryContainer, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                BouncyTextButton(
+                                    onClick = {
+                                        viewModel.setGame(game)
+                                        viewModel.setRegion(if (isGl) Region.GLOBAL else Region.JAPAN)
+                                        onNavigate(Screen.Main)
+                                    },
+                                    modifier = Modifier.clip(AbsoluteSmoothCornerShape(12.dp, 60)).background(MaterialTheme.colorScheme.primaryContainer)
+                                ) {
+                                    Text("Manage", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(100.dp))
         }
     }
 }
