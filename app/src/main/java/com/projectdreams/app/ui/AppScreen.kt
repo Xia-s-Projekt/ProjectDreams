@@ -4,6 +4,9 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import com.projectdreams.app.ui.theme.BouncyButton
 import com.projectdreams.app.ui.theme.BouncyCard
 import com.projectdreams.app.ui.theme.BouncyIconButton
@@ -161,7 +164,21 @@ fun AppScreen(
             screen = if (screen == Screen.CheckUpdates) Screen.Settings else Screen.Main
         }
         
-        Box(modifier = Modifier.fillMaxSize()) {
+        var isBottomBarVisible by remember { mutableStateOf(true) }
+        val nestedScrollConnection = remember {
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                    if (available.y < -5f) {
+                        isBottomBarVisible = false
+                    } else if (available.y > 5f) {
+                        isBottomBarVisible = true
+                    }
+                    return androidx.compose.ui.geometry.Offset.Zero
+                }
+            }
+        }
+        
+        Box(modifier = Modifier.fillMaxSize().nestedScroll(nestedScrollConnection)) {
             when (screen) {
                 Screen.Main -> MainContent(viewModel)
                 Screen.Settings -> SettingsScreen(
@@ -175,11 +192,17 @@ fun AppScreen(
                 )
             }
             
-            FloatingNavBar(
-                currentScreen = screen,
-                onNavigate = { screen = it },
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isBottomBarVisible,
+                enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it * 2 }),
+                exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it * 2 }),
                 modifier = Modifier.align(Alignment.BottomCenter)
-            )
+            ) {
+                FloatingNavBar(
+                    currentScreen = screen,
+                    onNavigate = { screen = it }
+                )
+            }
         }
     }
 }
@@ -195,12 +218,9 @@ private fun MainContent(viewModel: AppViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("ProjectDreams")
-                        Spacer(Modifier.width(8.dp))
-                        RegionDropdown(region = region, onSelect = viewModel::setRegion)
-                    }
+                title = { Text("ProjectDreams") },
+                actions = {
+                    RegionDropdown(region = region, onSelect = viewModel::setRegion)
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent
@@ -238,7 +258,7 @@ private fun RegionDropdown(region: Region, onSelect: (Region) -> Unit) {
         BouncyTextButton(
             onClick = { expanded = true },
             modifier = Modifier
-                .clip(AbsoluteSmoothCornerShape(12.dp, 60))
+                .clip(AbsoluteSmoothCornerShape(8.dp, 60))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Text(
@@ -1006,7 +1026,18 @@ private fun SectionTitle(text: String) {
 
 @Composable
 private fun MetaChip(text: String) {
-    AssistChip(onClick = {}, label = { Text(text) })
+    androidx.compose.material3.Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = AbsoluteSmoothCornerShape(8.dp, 60),
+        modifier = Modifier.height(32.dp)
+    ) {
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+        }
+    }
 }
 
 @Composable
