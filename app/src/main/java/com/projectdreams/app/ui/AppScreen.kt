@@ -808,7 +808,7 @@ private fun InstallMethodConfirmDialog(
                 androidx.compose.material3.Surface(
                     onClick = { dontAskAgain = !dontAskAgain },
                     shape = AbsoluteSmoothCornerShape(16.dp, 60),
-                    color = if (dontAskAgain) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    color = if (dontAskAgain) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -855,8 +855,8 @@ private fun MethodRadioRow(
 ) {
     val backgroundColor = when {
         selected -> MaterialTheme.colorScheme.primaryContainer
-        available -> MaterialTheme.colorScheme.surfaceVariant
-        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        available -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f)
     }
     val borderColor = when {
         selected -> MaterialTheme.colorScheme.primary
