@@ -70,11 +70,15 @@ fun BackgroundKillerCard() {
                 } catch (_: ActivityNotFoundException) {
                     launcher.launch(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                 }
+            } else {
+                try {
+                    launcher.launch(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                } catch (_: Exception) {}
             }
         },
         shape = AbsoluteSmoothCornerShape(16.dp, 60),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = if (exempted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -83,7 +87,7 @@ fun BackgroundKillerCard() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             androidx.compose.material3.Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer,
+                color = if (exempted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
                 shape = AbsoluteSmoothCornerShape(16.dp, 60),
                 modifier = Modifier.size(46.dp)
             ) {
@@ -91,7 +95,7 @@ fun BackgroundKillerCard() {
                     Icon(
                         imageVector = Icons.Filled.Power,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        tint = if (exempted) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
             }
@@ -103,36 +107,15 @@ fun BackgroundKillerCard() {
                 Text(
                     text = "Background App Killer",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = if (exempted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Some phones kill background apps aggressively. Exempt ProjectDreams to keep updates working.",
+                    text = if (exempted) "Already exempted — good to go." else "Some phones kill background apps aggressively. Exempt ProjectDreams to keep updates working.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (exempted) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(Modifier.size(14.dp))
-            com.projectdreams.app.ui.theme.BouncySwitch(
-                checked = exempted,
-                onCheckedChange = {
-                    if (!exempted) {
-                        try {
-                            launcher.launch(
-                                Intent(
-                                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                                    Uri.parse("package:${context.packageName}")
-                                )
-                            )
-                        } catch (_: ActivityNotFoundException) {
-                            launcher.launch(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                        }
-                    } else {
-                        try {
-                            launcher.launch(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                        } catch (_: Exception) {}
-                    }
-                }
-            )
         }
     }
 }
