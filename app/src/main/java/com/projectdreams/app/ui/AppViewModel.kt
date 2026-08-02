@@ -107,6 +107,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val game = app.settingsRepository.game
 
     fun setGame(game: com.projectdreams.app.data.Game) {
+        if (_isRefreshing.value) {
+            android.widget.Toast.makeText(app, "Please wait while the app is loading", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
         app.settingsRepository.setGame(game)
         loadApp()
     }
@@ -449,6 +453,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setRegion(value: Region) {
+        if (_isRefreshing.value) {
+            android.widget.Toast.makeText(app, "Please wait while the app is loading", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
         if (value == app.settingsRepository.region.value) return
         app.settingsRepository.setRegion(value)
         _installState.value = InstallUiState.Idle

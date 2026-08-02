@@ -2792,6 +2792,8 @@ private fun AddGameBottomSheet(
                             }
                         }
                     }
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(onClick = { query = ""; step = 7 }, modifier = Modifier.fillMaxWidth()) { Text("Can't find your game? Search manually") }
                 }
                 3 -> { // Confirm JP
                     Text("Japan Region Setup", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -2849,6 +2851,72 @@ private fun AddGameBottomSheet(
                             }
                         }
                     }
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(onClick = { query = ""; step = 6 }, modifier = Modifier.fillMaxWidth()) { Text("Can't find your game? Search manually") }
+                }
+                6 -> { // Manual Search for JP
+                    Text("Search Japan Game", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
+                    Text("Enter the name of the Japan game manually.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = { Text("Japan Game Title") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    Button(
+                        onClick = {
+                            if (query.isNotBlank()) {
+                                isSearching = true
+                                step = 3 // go back to Confirm JP with new results
+                                coroutineScope.launch {
+                                    searchResults = try {
+                                        viewModel.searchApps(query)
+                                    } catch (e: Exception) {
+                                        emptyList()
+                                    }
+                                    isSearching = false
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = query.isNotBlank()
+                    ) { Text("Search Play Store") }
+                }
+                7 -> { // Manual Search for GL
+                    Text("Search Global Game", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
+                    Text("Enter the name of the Global game manually.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = { Text("Global Game Title") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    Button(
+                        onClick = {
+                            if (query.isNotBlank()) {
+                                isSearching = true
+                                step = 1 // go back to Confirm GL with new results
+                                coroutineScope.launch {
+                                    searchResults = try {
+                                        viewModel.searchApps(query)
+                                    } catch (e: Exception) {
+                                        emptyList()
+                                    }
+                                    isSearching = false
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = query.isNotBlank()
+                    ) { Text("Search Play Store") }
                 }
                 5 -> { // Save step
                     Text("Review Configuration", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
