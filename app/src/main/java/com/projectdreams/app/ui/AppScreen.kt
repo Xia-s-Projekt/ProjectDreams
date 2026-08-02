@@ -72,7 +72,9 @@ import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Dataset
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.Icons
+
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
@@ -2539,6 +2541,7 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
     var searchQuery by remember { mutableStateOf("") }
     var installFilter by remember { mutableStateOf("All") }
     var regionFilter by remember { mutableStateOf("All") }
+    var showFilterSheet by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
     var selectedGameForDetails by remember { mutableStateOf<Triple<com.projectdreams.app.data.Game, Boolean, Boolean>?>(null) }
     
@@ -2702,84 +2705,21 @@ private fun GameManagerScreen(viewModel: AppViewModel, onNavigate: (Screen) -> U
                     Spacer(Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                        horizontalArrangement = Arrangement.End,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "Library Filters",
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         
-                        // Region Filter Button
-                        val regionIcon = when(regionFilter) {
-                            "All" -> Icons.Filled.Public
-                            "GL" -> Icons.Filled.Language
-                            "JP" -> Icons.Filled.Translate
-                            else -> Icons.Filled.Public
-                        }
-                        val regionTooltip = when(regionFilter) {
-                            "All" -> "All Regions"
-                            "GL" -> "Global Region"
-                            "JP" -> "Japan Region"
-                            else -> "All Regions"
-                        }
-                        
                         androidx.compose.material3.FilledTonalIconButton(
-                            onClick = { 
-                                regionFilter = when(regionFilter) {
-                                    "All" -> "GL"
-                                    "GL" -> "JP"
-                                    else -> "All"
-                                }
-                            },
-                            shape = AbsoluteSmoothCornerShape(
-                                androidx.compose.foundation.shape.CornerSize(26.dp),
-                                androidx.compose.foundation.shape.CornerSize(8.dp),
-                                androidx.compose.foundation.shape.CornerSize(8.dp),
-                                androidx.compose.foundation.shape.CornerSize(26.dp),
-                                60
-                            ),
+                            onClick = { showFilterSheet = true },
+                            shape = AbsoluteSmoothCornerShape(12.dp, 60),
                             modifier = Modifier.size(42.dp)
                         ) {
-                            Icon(regionIcon, contentDescription = regionTooltip)
-                        }
-                        
-                        Spacer(Modifier.width(4.dp))
-                        
-                        // Install Filter Button
-                        val installIcon = when(installFilter) {
-                            "All" -> Icons.Filled.Dataset
-                            "Installed" -> Icons.Filled.PhoneAndroid
-                            "Uninstalled" -> Icons.Filled.Cloud
-                            else -> Icons.Filled.Dataset
-                        }
-                        val installTooltip = when(installFilter) {
-                            "All" -> "All Storage"
-                            "Installed" -> "Installed Apps"
-                            "Uninstalled" -> "Not Installed"
-                            else -> "All Storage"
-                        }
-                        
-                        androidx.compose.material3.FilledTonalIconButton(
-                            onClick = { 
-                                installFilter = when(installFilter) {
-                                    "All" -> "Installed"
-                                    "Installed" -> "Uninstalled"
-                                    else -> "All"
-                                }
-                            },
-                            shape = AbsoluteSmoothCornerShape(
-                                androidx.compose.foundation.shape.CornerSize(8.dp),
-                                androidx.compose.foundation.shape.CornerSize(26.dp),
-                                androidx.compose.foundation.shape.CornerSize(26.dp),
-                                androidx.compose.foundation.shape.CornerSize(8.dp),
-                                60
-                            ),
-                            modifier = Modifier.size(42.dp)
-                        ) {
-                            Icon(installIcon, contentDescription = installTooltip)
+                            Icon(Icons.Filled.FilterList, contentDescription = "Filter")
                         }
                     }
                 }

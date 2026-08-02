@@ -168,7 +168,7 @@ fun AddGameScreen(
                                     Switch(checked = searchJapan, onCheckedChange = { searchJapan = it })
                                 }
                                 
-                                Spacer(Modifier.height(48.dp))
+                                Spacer(Modifier.height(24.dp))
                                 BouncyButton(
                                     onClick = {
                                         if (query.isNotBlank() && (searchGlobal || searchJapan)) {
@@ -216,17 +216,17 @@ fun AddGameScreen(
                                         }
                                     }
                                 }
-                                Spacer(Modifier.height(64.dp))
+                                Spacer(Modifier.height(16.dp))
                             }
                         }
                         
                         1 -> {
                             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                                Spacer(Modifier.height(32.dp))
+                                Spacer(Modifier.height(16.dp))
                                 Text("Region Setup", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold)
                                 Spacer(Modifier.height(12.dp))
                                 Text("Review the matches below. Tap any region to edit its configuration manually or select from alternatives.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(32.dp))
+                                Spacer(Modifier.height(16.dp))
                                 
                                 // Global Card
                                 RegionCard(
@@ -244,7 +244,7 @@ fun AddGameScreen(
                                     onClick = { selectedRegionForEdit = "JP"; sheetMode = "menu" }
                                 )
                                 
-                                Spacer(Modifier.height(48.dp))
+                                Spacer(Modifier.height(24.dp))
                                 val fallback = glApp?.displayName ?: jpApp?.displayName ?: query
                                 val gameId = glPackage.substringAfterLast(".").takeIf { it.isNotBlank() } ?: jpPackage.substringAfterLast(".")
                                 
@@ -260,7 +260,7 @@ fun AddGameScreen(
                                 ) {
                                     Text("Save Configuration", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                                 }
-                                Spacer(Modifier.height(64.dp))
+                                Spacer(Modifier.height(16.dp))
                             }
                         }
                     }
@@ -328,7 +328,7 @@ fun AddGameScreen(
                                         },
                                         isDestructive = true
                                     )
-                                    Spacer(Modifier.height(48.dp))
+                                    Spacer(Modifier.height(24.dp))
                                 }
                             }
                             "list" -> {
@@ -366,7 +366,7 @@ fun AddGameScreen(
                                                     }
                                                 }
                                             }
-                                            item { Spacer(Modifier.height(48.dp)) }
+                                            item { Spacer(Modifier.height(24.dp)) }
                                         }
                                     }
                                 }
@@ -424,7 +424,7 @@ fun AddGameScreen(
                                             else Text("Search", fontWeight = FontWeight.Bold)
                                         }
                                     }
-                                    Spacer(Modifier.height(48.dp))
+                                    Spacer(Modifier.height(24.dp))
                                 }
                             }
                             "manual" -> {
@@ -460,7 +460,7 @@ fun AddGameScreen(
                                     ) {
                                         Text("Apply", fontWeight = FontWeight.Bold)
                                     }
-                                    Spacer(Modifier.height(48.dp))
+                                    Spacer(Modifier.height(24.dp))
                                 }
                             }
                         }
