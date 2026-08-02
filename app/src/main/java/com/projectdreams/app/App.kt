@@ -99,9 +99,10 @@ class App : Application() {
     }
 
     /** The Play package for the currently selected region. */
-    fun trackedPackage(): String = when (settingsRepository.region.value) {
-        Region.GLOBAL -> PACKAGE_GLOBAL
-        Region.JAPAN -> PACKAGE_JAPAN
+    fun trackedPackage(): String {
+        val game = settingsRepository.game.value
+        val region = settingsRepository.region.value
+        return if (region == Region.GLOBAL) game.glPackage else game.jpPackage
     }
 
     override fun onCreate() {

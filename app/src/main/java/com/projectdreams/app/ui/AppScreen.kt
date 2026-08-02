@@ -143,6 +143,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import com.aurora.gplayapi.data.models.App
 import com.projectdreams.app.data.Region
+import com.projectdreams.app.data.Game
 import com.projectdreams.app.data.SettingsRepository
 import com.projectdreams.app.data.install.InstallManager
 import com.projectdreams.app.data.model.ResumeInfo
@@ -256,6 +257,7 @@ private fun MainContent(viewModel: AppViewModel) {
     val installState by viewModel.installState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val region by viewModel.region.collectAsStateWithLifecycle()
+    val game by viewModel.game.collectAsStateWithLifecycle()
 
     val scrollState = rememberScrollState()
     val showAppTitle by remember { derivedStateOf { scrollState.value > 250 } }
@@ -264,26 +266,13 @@ private fun MainContent(viewModel: AppViewModel) {
         topBar = {
             TopAppBar(
                 title = { 
-                    androidx.compose.animation.AnimatedContent(
-                        targetState = showAppTitle && uiState is AppUiState.Ready,
-                        label = "AppTitle"
-                    ) { showApp ->
-                        if (showApp) {
-                            val app = (uiState as AppUiState.Ready).app
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                AsyncImage(
-                                    model = app.iconArtwork?.url,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.size(32.dp).clip(AbsoluteSmoothCornerShape(8.dp, 60)).background(MaterialTheme.colorScheme.surfaceVariant)
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text(app.displayName, fontWeight = FontWeight.SemiBold)
-                            }
-                        } else {
-                            Text("ProjectDreams", fontWeight = FontWeight.SemiBold)
-                        }
-                    }
+                    val currentApp = (uiState as? AppUiState.Ready)?.app
+                    GameDropdown(
+                        game = game, 
+                        appIconUrl = currentApp?.iconArtwork?.url, 
+                        appName = currentApp?.displayName ?: game.fallbackName,
+                        onSelect = viewModel::setGame
+                    )
                 },
                 actions = {
                     RegionDropdown(region = region, onSelect = viewModel::setRegion)
@@ -2296,6 +2285,77 @@ private fun NavBarItem(
             Row {
                 Spacer(Modifier.width(8.dp))
                 Text(label, style = MaterialTheme.typography.labelLarge, color = contentColor, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GameDropdown(game: Game, appIconUrl: String?, appName: String, onSelect: (Game) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        BouncyTextButton(
+            onClick = { expanded = true },
+            modifier = Modifier
+                .clip(AbsoluteSmoothCornerShape(12.dp, 60))
+        ) {
+            if (appIconUrl != null) {
+                AsyncImage(
+                    model = appIconUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(32.dp).clip(AbsoluteSmoothCornerShape(8.dp, 60)).background(MaterialTheme.colorScheme.surfaceVariant)
+                )
+                Spacer(Modifier.width(12.dp))
+            }
+            Text(
+                text = appName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                Icons.Filled.ArrowDropDown,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        if (expanded) {
+            ModalBottomSheet(
+                onDismissRequest = { expanded = false },
+                sheetState = rememberModalBottomSheetState(),
+                shape = AbsoluteSmoothCornerShape(32.dp, 60)
+            ) {
+                androidx.compose.foundation.layout.Column(Modifier.padding(bottom = 24.dp)) {
+                    Text(
+                        "Select Game",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                    )
+                    Game.entries.forEach { option ->
+                        androidx.compose.foundation.layout.Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSelect(option)
+                                    expanded = false
+                                }
+                                .padding(horizontal = 24.dp, vertical = 16.dp)
+                        ) {
+                            Text(
+                                text = option.fallbackName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (option == game) FontWeight.Bold else FontWeight.Normal,
+                                color = if (option == game) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
             }
         }
     }

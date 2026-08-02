@@ -7,6 +7,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** Play storefront region. GL = global build, JP = Japanese build. */
+
+enum class Game(val glPackage: String, val jpPackage: String, val fallbackName: String) {
+    HOLOLIVE_DREAMS("game.qualiarts.hololive.dreams.com", "game.qualiarts.hololive.dreams.jp", "Hololive Dreams"),
+    PROJECT_SEKAI("com.sega.ColorfulStage.en", "com.sega.pjsekai", "Project Sekai")
+}
+
+/** Play storefront region. GL = global build, JP = Japanese build. */
 enum class Region(val label: String) {
     GLOBAL("Global"),
     JAPAN("Japan")
@@ -36,6 +43,13 @@ class SettingsRepository(context: Context) {
 
     private val _autoUpdate = MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE, false))
     val autoUpdate: StateFlow<Boolean> = _autoUpdate.asStateFlow()
+
+    
+    private val _game = MutableStateFlow(
+        runCatching { Game.valueOf(prefs.getString(KEY_GAME, null) ?: "") }
+            .getOrDefault(Game.HOLOLIVE_DREAMS)
+    )
+    val game: StateFlow<Game> = _game.asStateFlow()
 
     private val _region = MutableStateFlow(
         runCatching { Region.valueOf(prefs.getString(KEY_REGION, null) ?: "") }
@@ -74,6 +88,12 @@ class SettingsRepository(context: Context) {
     fun setAutoUpdate(value: Boolean) {
         _autoUpdate.value = value
         prefs.edit().putBoolean(KEY_AUTO_UPDATE, value).apply()
+    }
+
+    
+    fun setGame(value: Game) {
+        _game.value = value
+        prefs.edit().putString(KEY_GAME, value.name).apply()
     }
 
     fun setRegion(value: Region) {
@@ -117,7 +137,8 @@ class SettingsRepository(context: Context) {
         private const val KEY_INSTALL_MODE = "install_mode"
         private const val KEY_UPDATE_NOTIFICATIONS = "update_notifications"
         private const val KEY_AUTO_UPDATE = "auto_update"
-        private const val KEY_REGION = "region"
+        private const val KEY_GAME = "game"
+        const val KEY_REGION = "region"
         private const val KEY_CONFIRM_INSTALL_METHOD = "confirm_install_method"
         private const val KEY_DELETE_AFTER_INSTALL = "delete_after_install"
         private const val KEY_UPDATE_INTERVAL_HOURS = "update_interval_hours"

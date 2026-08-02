@@ -15,6 +15,7 @@ import com.projectdreams.app.App as ProjectDreamsApp
 import com.projectdreams.app.data.Format
 import com.projectdreams.app.data.InstalledAppInfo
 import com.projectdreams.app.data.Region
+import com.projectdreams.app.data.Game
 import com.projectdreams.app.data.install.InstallManager
 import com.projectdreams.app.data.model.DownloadProgress
 import com.projectdreams.app.data.model.ResumeInfo
@@ -87,6 +88,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val autoUpdate = app.settingsRepository.autoUpdate
     val updateIntervalHours = app.settingsRepository.updateIntervalHours
     val region = app.settingsRepository.region
+    val game = app.settingsRepository.game
+
+    fun setGame(game: com.projectdreams.app.data.Game) {
+        app.settingsRepository.setGame(game)
+        loadApp()
+    }
     val confirmInstallMethod = app.settingsRepository.confirmInstallMethod
     val deleteAfterInstall = app.settingsRepository.deleteAfterInstall
     val rootAvailable = app.installManager.rootAvailable
