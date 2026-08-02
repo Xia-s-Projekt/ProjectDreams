@@ -612,21 +612,68 @@ private fun AppDetailView(
     if (showUninstallDialog) {
         AlertDialog(
             onDismissRequest = { showUninstallDialog = false },
-            title = { Text("Uninstall hololive Dreams?") },
-            text = { Text("The app will be removed from this device.") },
-            confirmButton = {
-                BouncyTextButton(onClick = {
-                    showUninstallDialog = false
-                    viewModel.uninstall()
-                }) {
-                    Text("Uninstall", color = MaterialTheme.colorScheme.error)
+            shape = AbsoluteSmoothCornerShape(24.dp, 60),
+            icon = {
+                androidx.compose.material3.Surface(
+                    shape = AbsoluteSmoothCornerShape(16.dp, 60),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            androidx.compose.material.icons.Icons.Filled.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
             },
-            dismissButton = {
-                BouncyTextButton(onClick = { showUninstallDialog = false }) {
-                    Text("Cancel")
+            title = {
+                Text(
+                    text = "Uninstall ${app.displayName}?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            },
+            text = {
+                Text(
+                    text = "This app will be removed from your device. This action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    BouncyOutlinedButton(
+                        onClick = { showUninstallDialog = false },
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        shape = AbsoluteSmoothCornerShape(14.dp, 60)
+                    ) {
+                        Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
+                    }
+                    BouncyButton(
+                        onClick = {
+                            showUninstallDialog = false
+                            viewModel.uninstall()
+                        },
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        shape = AbsoluteSmoothCornerShape(14.dp, 60),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        )
+                    ) {
+                        Text("Uninstall", fontWeight = FontWeight.Bold)
+                    }
                 }
-            }
+            },
+            dismissButton = {}
         )
     }
 
