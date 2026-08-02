@@ -339,7 +339,7 @@ private fun MainContent(viewModel: AppViewModel) {
             when (val state = uiState) {
                 is AppUiState.Loading -> LoadingView()
                 is AppUiState.Error -> {
-                    if (state.message.contains("not found", ignoreCase = true) || state.message.contains("404", ignoreCase = true)) {
+                    if (state.message.contains("not found", ignoreCase = true) || state.message.contains("404", ignoreCase = true) || state.message.contains("DF-DFERH-01", ignoreCase = true)) {
                         RegionUnavailableView(onRetry = { viewModel.loadApp() })
                     } else {
                         ErrorView(state.message) { viewModel.loadApp() }
