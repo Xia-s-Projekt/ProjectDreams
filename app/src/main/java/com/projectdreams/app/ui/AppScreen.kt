@@ -853,7 +853,16 @@ private fun MethodRadioRow(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    val backgroundColor = when {
+        selected -> MaterialTheme.colorScheme.primaryContainer
+        available -> MaterialTheme.colorScheme.surfaceVariant
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    }
+    val borderColor = when {
+        selected -> MaterialTheme.colorScheme.primary
+        available -> MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+        else -> androidx.compose.ui.graphics.Color.Transparent
+    }
     val contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
     
     val statusText = if (available) "Granted" else "Not Granted"
@@ -863,6 +872,7 @@ private fun MethodRadioRow(
         onClick = onClick,
         shape = AbsoluteSmoothCornerShape(16.dp, 60),
         color = backgroundColor,
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
     ) {
         Row(
