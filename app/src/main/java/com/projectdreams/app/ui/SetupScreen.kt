@@ -680,8 +680,8 @@ private fun DisclaimerPage(accepted: Boolean, onAccepted: (Boolean) -> Unit) {
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "• No Affiliation: We are not endorsed by, affiliated with, or connected to COVER Corp or QualiArts in any capacity.\n" +
-                     "• Copyrights: hololive Dreams and all related intellectual property are entirely owned by COVER Corp and QualiArts.\n" +
+                text = "• No Affiliation: We are not endorsed by, affiliated with, or connected to any game publisher or developer.\n" +
+                     "• Copyrights: All games and related intellectual property are entirely owned by their respective rights holders.\n" +
                      "• Delivery: This software generates no revenue. It acts solely as a direct bridge to the official Google Play servers, hosting no proprietary assets natively.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

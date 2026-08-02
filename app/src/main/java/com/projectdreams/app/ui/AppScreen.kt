@@ -2014,9 +2014,9 @@ private fun SettingsScreen(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "ProjectDreams is an independent, fan-made downloader. It is not " +
-                    "affiliated with, endorsed by, or connected to COVER Corp or QualiArts " +
-                    "in any way. hololive Dreams is owned by COVER Corp and QualiArts, and " +
+                text = "ProjectDreams is an independent, open-source downloader. It is not " +
+                    "affiliated with, endorsed by, or connected to any game publisher or developer " +
+                    "in any way. All games and related intellectual property are owned by their respective rights holders, and " +
                     "this project makes no revenue from it. All trademarks belong to their " +
                     "respective owners.",
                 style = MaterialTheme.typography.bodySmall,
