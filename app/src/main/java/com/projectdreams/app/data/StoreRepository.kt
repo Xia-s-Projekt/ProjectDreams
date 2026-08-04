@@ -71,6 +71,9 @@ class StoreRepository(
                 // Try to acquire using fresh Japan sessions up to 3 times
                 var acquired = false
                 var jpHelper = helper
+                var lastAcquireError: String? = null
+                var lastPurchaseError: Exception? = null
+
                 repeat(3) { attempt ->
                     if (acquired) return@repeat
                     try {
@@ -78,19 +81,24 @@ class StoreRepository(
                         jpHelper = PurchaseHelper(jpAuthData).using(client) as PurchaseHelper
                         if (jpHelper.acquire(packageName, versionCode, offerType)) {
                             acquired = true
-                            return@withContext jpHelper.purchase(packageName, versionCode, offerType, certificateHash)
+                            try {
+                                return@withContext jpHelper.purchase(packageName, versionCode, offerType, certificateHash)
+                            } catch (e2: Exception) {
+                                lastPurchaseError = e2
+                            }
+                        } else {
+                            val country = DfeCookieUtil.extractCountry(jpAuthData.dfeCookie)
+                            lastAcquireError = "acquire() returned false (country=$country)"
                         }
                     } catch (e2: Exception) {
-                        // ignore and try again
+                        lastAcquireError = e2.message
                     }
                 }
 
-                // Final attempt just in case acquire succeeded but purchase failed, or to bubble up error
-                try {
-                    return@withContext jpHelper.purchase(packageName, versionCode, offerType, certificateHash)
-                } catch (e2: Exception) {
-                    throw e
-                }
+                throw IllegalStateException(
+                    "Fallback failed. Acquired=$acquired. AcquireErr=$lastAcquireError. PurchaseErr=${lastPurchaseError?.message}",
+                    e
+                )
             } else {
                 throw e
             }
