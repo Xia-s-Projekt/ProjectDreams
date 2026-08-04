@@ -37,6 +37,9 @@ class AuthRepository(
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    val currentRegion: Region
+        get() = settingsRepository.region.value
+
     private val json: Json = Json {
         prettyPrint = true
         ignoreUnknownKeys = true
@@ -96,18 +99,49 @@ class AuthRepository(
                 "Token dispenser error (${response.code}): ${response.errorString.ifBlank { "unknown" }}"
             )
         }
-        val auth = json.decodeFromString<Auth>(String(response.responseBytes))
-        val authData = AuthHelper.build(
-            email = auth.email,
-            token = auth.auth,
-            tokenType = AuthHelper.Token.AUTH,
-            isAnonymous = true,
-            properties = props,
-            locale = localeFor(region)
-        )
+        val responseStr = String(response.responseBytes)
+
+        // The AuroraOSS dispenser may return either:
+        //   1. A full serialized AuthData (new format) — extract token & rebuild locally!
+        //   2. An Auth { email, authToken } object (legacy format) — build via AuthHelper
+        val authData = try {
+            val decoded = json.decodeFromString<AuthData>(responseStr)
+            Log.d(TAG, "Dispenser returned full AuthData, rebuilding locally to apply spoof properties")
+            val tokenStr = if (decoded.authToken.isNullOrBlank()) decoded.aasToken else decoded.authToken
+            AuthHelper.build(
+                email = decoded.email,
+                token = tokenStr ?: "",
+                tokenType = AuthHelper.Token.AUTH,
+                isAnonymous = true,
+                properties = props,
+                locale = localeFor(region)
+            )
+        } catch (_: Exception) {
+            val auth = json.decodeFromString<Auth>(responseStr)
+            AuthHelper.build(
+                email = auth.email,
+                token = auth.auth,
+                tokenType = AuthHelper.Token.AUTH,
+                isAnonymous = true,
+                properties = props,
+                locale = localeFor(region)
+            )
+        }
+
+        val country = DfeCookieUtil.extractCountry(authData.dfeCookie)
         prefs.edit().putString(authKey(region), json.encodeToString(authData)).apply()
-        Log.i(TAG, "Fetched new anonymous session (${region.name}) for ${auth.email}")
+        Log.i(TAG, "Fetched new anonymous session (${region.name}) for ${authData.email} (country=$country)")
         authData
+    }
+
+    /**
+     * Forces a fresh session from the dispenser for [region], discarding any cached session.
+     * Returns the new AuthData.
+     */
+    suspend fun refreshAuth(region: Region = settingsRepository.region.value): AuthData {
+        val key = authKey(region)
+        prefs.edit().remove(key).apply()
+        return fetchAndSave(region)
     }
 
     private fun authKey(region: Region) = "${KEY_AUTH_DATA}_${region.name}_v2"
