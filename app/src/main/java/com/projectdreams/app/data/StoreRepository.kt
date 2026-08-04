@@ -96,7 +96,7 @@ class StoreRepository(
                 }
 
                 throw IllegalStateException(
-                    "Fallback failed. Acquired=$acquired. AcquireErr=$lastAcquireError. PurchaseErr=${lastPurchaseError?.message}",
+                    "This game is region-locked to Japan by Google Play. Please turn on a Japan VPN to download it for the first time on this network.",
                     e
                 )
             } else {
