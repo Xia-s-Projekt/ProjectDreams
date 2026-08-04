@@ -102,20 +102,18 @@ class AuthRepository(
         val responseStr = String(response.responseBytes)
 
         // The AuroraOSS dispenser may return either:
-        //   1. A full serialized AuthData (new format) — extract token & rebuild locally!
-        //   2. An Auth { email, authToken } object (legacy format) — build via AuthHelper
+        //   1. A full serialized AuthData (new format) — use it DIRECTLY.
+        //      The dispenser built this session server-side (from a JP IP for
+        //      JP requests), so it already has valid gsfId/dfeCookie/tokens.
+        //      Rebuilding locally via AuthHelper.build() would perform a new
+        //      device check-in from the user's actual IP, destroying the JP
+        //      session — which is what caused the AppNotPurchased regression.
+        //   2. An Auth { email, authToken } object (legacy format) — build
+        //      via AuthHelper with our spoofed device properties.
         val authData = try {
-            val decoded = json.decodeFromString<AuthData>(responseStr)
-            Log.d(TAG, "Dispenser returned full AuthData, rebuilding locally to apply spoof properties")
-            val tokenStr = if (decoded.authToken.isNullOrBlank()) decoded.aasToken else decoded.authToken
-            AuthHelper.build(
-                email = decoded.email,
-                token = tokenStr ?: "",
-                tokenType = AuthHelper.Token.AUTH,
-                isAnonymous = true,
-                properties = props,
-                locale = localeFor(region)
-            )
+            json.decodeFromString<AuthData>(responseStr).also {
+                Log.d(TAG, "Dispenser returned full AuthData for ${it.email}, using directly")
+            }
         } catch (_: Exception) {
             val auth = json.decodeFromString<Auth>(responseStr)
             AuthHelper.build(
