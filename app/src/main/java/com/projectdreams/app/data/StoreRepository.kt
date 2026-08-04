@@ -58,8 +58,16 @@ class StoreRepository(
         certificateHash: String? = null
     ): List<PlayFile> = withContext(Dispatchers.IO) {
         val authData = authRepository.authData()
-        PurchaseHelper(authData)
-            .using(client)
-            .purchase(packageName, versionCode, offerType, certificateHash)
+        val helper = PurchaseHelper(authData).using(client) as PurchaseHelper
+        try {
+            helper.purchase(packageName, versionCode, offerType, certificateHash)
+        } catch (e: com.aurora.gplayapi.exceptions.GooglePlayException.AppNotPurchased) {
+            val acquired = helper.acquire(packageName, versionCode, offerType)
+            if (acquired) {
+                helper.purchase(packageName, versionCode, offerType, certificateHash)
+            } else {
+                throw e
+            }
+        }
     }
 }

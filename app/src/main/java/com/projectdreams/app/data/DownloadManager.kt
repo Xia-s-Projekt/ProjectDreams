@@ -189,6 +189,7 @@ class DownloadManager(
             }
             val offset = if (response.code == 206) resumeOffset else 0L
             response.body.byteStream().use { input ->
+                target.parentFile?.mkdirs()
                 FileOutputStream(target, response.code == 206).use { output ->
                     val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                     var written = offset
