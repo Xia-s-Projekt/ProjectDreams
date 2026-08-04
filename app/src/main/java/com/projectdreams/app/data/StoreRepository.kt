@@ -63,17 +63,29 @@ class StoreRepository(
             helper.purchase(packageName, versionCode, offerType, certificateHash)
         } catch (e: Exception) {
             if (e.javaClass.simpleName.contains("AppNotPurchased") || e.message?.contains("not purchased") == true) {
-                val acquired = helper.acquire(packageName, versionCode, offerType)
-                if (acquired) {
+                // First try acquiring with current session
+                if (helper.acquire(packageName, versionCode, offerType)) {
                     return@withContext helper.purchase(packageName, versionCode, offerType, certificateHash)
                 }
-                
-                val jpAuthData = authRepository.authData(Region.JAPAN)
-                val jpHelper = PurchaseHelper(jpAuthData).using(client) as PurchaseHelper
-                if (jpHelper.acquire(packageName, versionCode, offerType)) {
-                    return@withContext jpHelper.purchase(packageName, versionCode, offerType, certificateHash)
+
+                // Try to acquire using fresh Japan sessions up to 3 times
+                var acquired = false
+                var jpHelper = helper
+                repeat(3) { attempt ->
+                    if (acquired) return@repeat
+                    try {
+                        val jpAuthData = authRepository.refreshAuth(Region.JAPAN)
+                        jpHelper = PurchaseHelper(jpAuthData).using(client) as PurchaseHelper
+                        if (jpHelper.acquire(packageName, versionCode, offerType)) {
+                            acquired = true
+                            return@withContext jpHelper.purchase(packageName, versionCode, offerType, certificateHash)
+                        }
+                    } catch (e2: Exception) {
+                        // ignore and try again
+                    }
                 }
-                
+
+                // Final attempt just in case acquire succeeded but purchase failed, or to bubble up error
                 try {
                     return@withContext jpHelper.purchase(packageName, versionCode, offerType, certificateHash)
                 } catch (e2: Exception) {
