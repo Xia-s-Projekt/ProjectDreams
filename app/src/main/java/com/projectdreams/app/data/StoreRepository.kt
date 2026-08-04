@@ -61,10 +61,24 @@ class StoreRepository(
         val helper = PurchaseHelper(authData).using(client) as PurchaseHelper
         try {
             helper.purchase(packageName, versionCode, offerType, certificateHash)
-        } catch (e: com.aurora.gplayapi.exceptions.GooglePlayException.AppNotPurchased) {
-            val acquired = helper.acquire(packageName, versionCode, offerType)
-            if (acquired) {
-                helper.purchase(packageName, versionCode, offerType, certificateHash)
+        } catch (e: Exception) {
+            if (e.javaClass.simpleName.contains("AppNotPurchased") || e.message?.contains("not purchased") == true) {
+                val acquired = helper.acquire(packageName, versionCode, offerType)
+                if (acquired) {
+                    return@withContext helper.purchase(packageName, versionCode, offerType, certificateHash)
+                }
+                
+                val jpAuthData = authRepository.authData(Region.JAPAN)
+                val jpHelper = PurchaseHelper(jpAuthData).using(client) as PurchaseHelper
+                if (jpHelper.acquire(packageName, versionCode, offerType)) {
+                    return@withContext jpHelper.purchase(packageName, versionCode, offerType, certificateHash)
+                }
+                
+                try {
+                    return@withContext jpHelper.purchase(packageName, versionCode, offerType, certificateHash)
+                } catch (e2: Exception) {
+                    throw e
+                }
             } else {
                 throw e
             }
