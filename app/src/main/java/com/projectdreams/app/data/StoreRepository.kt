@@ -1,5 +1,6 @@
 package com.projectdreams.app.data
 
+import android.util.Log
 import com.aurora.gplayapi.data.models.App
 import com.aurora.gplayapi.data.models.PlayFile
 import com.aurora.gplayapi.helpers.AppDetailsHelper
@@ -11,10 +12,16 @@ import kotlinx.coroutines.withContext
  * Wraps the GPlayApi helpers that talk directly to Google Play's backend:
  * - [AppDetailsHelper] fetches store listings (name, icon, screenshots, changelog…)
  * - [PurchaseHelper] buys/"acquires" the app and returns signed download URLs.
+ *
+ * When a game is region-locked to Japan and the anonymous session cannot
+ * acquire it (Google checks the request IP), the repository transparently
+ * retries through a user-configured SOCKS5 proxy so the acquire call
+ * appears to originate from Japan.
  */
 class StoreRepository(
     private val authRepository: AuthRepository,
-    private val client: PlayHttpClient
+    private val client: PlayHttpClient,
+    private val settingsRepository: SettingsRepository
 ) {
 
     suspend fun getApp(packageName: String): App = withContext(Dispatchers.IO) {
@@ -62,46 +69,68 @@ class StoreRepository(
         try {
             helper.purchase(packageName, versionCode, offerType, certificateHash)
         } catch (e: Exception) {
-            if (e.javaClass.simpleName.contains("AppNotPurchased") || e.message?.contains("not purchased") == true) {
-                // First try acquiring with current session
-                if (helper.acquire(packageName, versionCode, offerType)) {
-                    return@withContext helper.purchase(packageName, versionCode, offerType, certificateHash)
-                }
+            val isRegionBlock =
+                e.javaClass.simpleName.contains("AppNotPurchased") ||
+                e.message?.contains("not purchased") == true
 
-                // Try to acquire using fresh Japan sessions up to 3 times
-                var acquired = false
-                var jpHelper = helper
-                var lastAcquireError: String? = null
-                var lastPurchaseError: Exception? = null
+            if (!isRegionBlock) throw e
 
-                repeat(3) { attempt ->
-                    if (acquired) return@repeat
-                    try {
-                        val jpAuthData = authRepository.refreshAuth(Region.JAPAN)
-                        jpHelper = PurchaseHelper(jpAuthData).using(client) as PurchaseHelper
-                        if (jpHelper.acquire(packageName, versionCode, offerType)) {
-                            acquired = true
-                            try {
-                                return@withContext jpHelper.purchase(packageName, versionCode, offerType, certificateHash)
-                            } catch (e2: Exception) {
-                                lastPurchaseError = e2
-                            }
-                        } else {
-                            val country = DfeCookieUtil.extractCountry(jpAuthData.dfeCookie)
-                            lastAcquireError = "acquire() returned false (country=$country)"
-                        }
-                    } catch (e2: Exception) {
-                        lastAcquireError = e2.message
-                    }
-                }
+            Log.w(TAG, "Purchase blocked for $packageName, attempting proxy-routed acquire...")
 
+            // ── Attempt 1: acquire with current (direct) session ──
+            if (helper.acquire(packageName, versionCode, offerType)) {
+                Log.i(TAG, "Direct acquire succeeded")
+                return@withContext helper.purchase(packageName, versionCode, offerType, certificateHash)
+            }
+
+            // ── Attempt 2: acquire through Japan proxy ──
+            if (!settingsRepository.hasProxy()) {
                 throw IllegalStateException(
-                    "This game is region-locked to Japan by Google Play. Please turn on a Japan VPN to download it for the first time on this network.",
+                    "This game requires a Japan IP to acquire. " +
+                    "Configure a Japan SOCKS5 proxy in Settings → Japan Proxy to download region-locked games.",
                     e
                 )
-            } else {
-                throw e
             }
+
+            val proxyHost = settingsRepository.proxyHost.value
+            val proxyPort = settingsRepository.proxyPort.value
+            Log.i(TAG, "Routing acquire through proxy $proxyHost:$proxyPort")
+
+            val proxiedClient = ProxiedPlayHttpClient(
+                directClient = client.rawClient,
+                proxyHost = proxyHost,
+                proxyPort = proxyPort
+            )
+
+            // Re-roll fresh JP sessions and acquire through the proxy
+            var lastError: String? = null
+            repeat(3) { attempt ->
+                try {
+                    val jpAuthData = authRepository.refreshAuth(Region.JAPAN)
+                    val jpHelper = PurchaseHelper(jpAuthData).using(proxiedClient) as PurchaseHelper
+
+                    if (jpHelper.acquire(packageName, versionCode, offerType)) {
+                        Log.i(TAG, "Proxy acquire succeeded on attempt ${attempt + 1}")
+                        return@withContext jpHelper.purchase(packageName, versionCode, offerType, certificateHash)
+                    } else {
+                        lastError = "acquire returned false on attempt ${attempt + 1}"
+                        Log.w(TAG, lastError!!)
+                    }
+                } catch (e2: Exception) {
+                    lastError = e2.message
+                    Log.w(TAG, "Proxy acquire attempt ${attempt + 1} failed: ${e2.message}")
+                }
+            }
+
+            throw IllegalStateException(
+                "Region-locked acquire failed after 3 proxy attempts ($lastError). " +
+                "Verify your Japan proxy is working and reachable.",
+                e
+            )
         }
+    }
+
+    companion object {
+        private const val TAG = "StoreRepository"
     }
 }

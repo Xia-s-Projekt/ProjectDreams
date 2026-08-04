@@ -488,6 +488,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         app.settingsRepository.setDeleteAfterInstall(value)
     }
 
+    val proxyHost = app.settingsRepository.proxyHost
+    val proxyPort = app.settingsRepository.proxyPort
+
+    fun setProxyHost(value: String) {
+        app.settingsRepository.setProxyHost(value)
+    }
+
+    fun setProxyPort(value: Int) {
+        app.settingsRepository.setProxyPort(value)
+    }
+
     fun setUpdateIntervalHours(hours: Long) {
         app.settingsRepository.setUpdateIntervalHours(hours)
         app.rescheduleUpdateChecks()

@@ -2,8 +2,10 @@ package com.projectdreams.app.data
 
 import com.aurora.gplayapi.data.models.PlayResponse
 import com.aurora.gplayapi.network.IHttpClient
-import com.projectdreams.app.BuildConfig
 import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,35 +20,48 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 
 /**
- * OkHttp backed implementation of GPlayApi's [IHttpClient].
+ * An [IHttpClient] that routes Google Play API requests (`fdfe/acquire`,
+ * `fdfe/purchase`, `fdfe/delivery`) through a SOCKS5 proxy so the server
+ * sees a Japan IP, while all other traffic (CDN downloads, token dispenser)
+ * goes direct.
+ *
+ * This is the mechanism that actually bypasses Google Play's IP-based
+ * region lock on the acquire step for never-before-purchased apps.
  */
-class PlayHttpClient(private val okHttpClient: OkHttpClient) : IHttpClient {
+class ProxiedPlayHttpClient(
+    private val directClient: OkHttpClient,
+    proxyHost: String,
+    proxyPort: Int,
+    proxyType: Proxy.Type = Proxy.Type.SOCKS
+) : IHttpClient {
 
-    /** Exposed for [ProxiedPlayHttpClient] to derive a proxied clone. */
-    val rawClient: OkHttpClient get() = okHttpClient
+    private val proxiedClient: OkHttpClient = directClient.newBuilder()
+        .proxy(Proxy(proxyType, InetSocketAddress.createUnresolved(proxyHost, proxyPort)))
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     private val _responseCode = MutableStateFlow(100)
     override val responseCode: StateFlow<Int>
         get() = _responseCode.asStateFlow()
 
+    /** Returns the proxied client for Google Play API calls, direct for everything else. */
+    private fun clientFor(url: String): OkHttpClient =
+        if (PROXIED_PATHS.any { url.contains(it) }) proxiedClient else directClient
+
     @Throws(IOException::class)
-    fun post(url: String, headers: Map<String, String>, requestBody: RequestBody): PlayResponse {
+    override fun post(
+        url: String,
+        headers: Map<String, String>,
+        body: ByteArray
+    ): PlayResponse {
         val request = Request(
             url = url.toHttpUrl(),
             headers = headers.toHeaders(),
             method = POST,
-            body = requestBody
+            body = body.toRequestBody()
         )
-        return processRequest(request)
-    }
-
-    @Throws(IOException::class)
-    fun call(url: String, headers: Map<String, String> = emptyMap()): Response {
-        val request = Request(
-            url = url.toHttpUrl(),
-            headers = headers.toHeaders()
-        )
-        return okHttpClient.newCall(request).execute()
+        return processRequest(request, clientFor(url))
     }
 
     @Throws(IOException::class)
@@ -61,7 +76,7 @@ class PlayHttpClient(private val okHttpClient: OkHttpClient) : IHttpClient {
             method = POST,
             body = "".toRequestBody(null)
         )
-        return processRequest(request)
+        return processRequest(request, clientFor(url))
     }
 
     override fun postAuth(url: String, body: ByteArray): PlayResponse {
@@ -73,12 +88,9 @@ class PlayHttpClient(private val okHttpClient: OkHttpClient) : IHttpClient {
             method = POST,
             body = requestBody
         )
-        return processRequest(request)
+        // Auth calls go to the Aurora dispenser, not Google — always direct.
+        return processRequest(request, directClient)
     }
-
-    @Throws(IOException::class)
-    override fun post(url: String, headers: Map<String, String>, body: ByteArray): PlayResponse =
-        post(url, headers, body.toRequestBody())
 
     @Throws(IOException::class)
     override fun get(url: String, headers: Map<String, String>): PlayResponse =
@@ -95,17 +107,19 @@ class PlayHttpClient(private val okHttpClient: OkHttpClient) : IHttpClient {
             headers = headers.toHeaders(),
             method = GET
         )
-        return processRequest(request)
+        return processRequest(request, clientFor(url))
     }
 
     override fun getAuth(url: String): PlayResponse {
-        val headers = mapOf("User-Agent" to "${BuildConfig.APPLICATION_ID}-${BuildConfig.VERSION_NAME}-${BuildConfig.VERSION_CODE}")
+        val headers = mapOf(
+            "User-Agent" to "${com.projectdreams.app.BuildConfig.APPLICATION_ID}-${com.projectdreams.app.BuildConfig.VERSION_NAME}-${com.projectdreams.app.BuildConfig.VERSION_CODE}"
+        )
         val request = Request(
             url = url.toHttpUrl(),
             headers = headers.toHeaders(),
             method = GET
         )
-        return processRequest(request)
+        return processRequest(request, directClient)
     }
 
     @Throws(IOException::class)
@@ -115,12 +129,12 @@ class PlayHttpClient(private val okHttpClient: OkHttpClient) : IHttpClient {
             headers = headers.toHeaders(),
             method = GET
         )
-        return processRequest(request)
+        return processRequest(request, clientFor(url))
     }
 
-    private fun processRequest(request: Request): PlayResponse {
+    private fun processRequest(request: Request, client: OkHttpClient): PlayResponse {
         _responseCode.value = 0
-        return buildPlayResponse(okHttpClient.newCall(request).execute())
+        return buildPlayResponse(client.newCall(request).execute())
     }
 
     private fun buildUrl(url: String, params: Map<String, String>): HttpUrl {
@@ -144,5 +158,12 @@ class PlayHttpClient(private val okHttpClient: OkHttpClient) : IHttpClient {
         private const val POST = "POST"
         private const val GET = "GET"
         private const val AURORA_USER_AGENT = "com.aurora.store-4.9.1-30042"
+
+        /** URL path fragments that must go through the Japan proxy. */
+        private val PROXIED_PATHS = listOf(
+            "fdfe/acquire",
+            "fdfe/purchase",
+            "fdfe/delivery"
+        )
     }
 }

@@ -1968,6 +1968,106 @@ private fun InstallMethodPreference(
     }
 }
 
+@Composable
+private fun ProxySettingsRow(viewModel: AppViewModel) {
+    val host by viewModel.proxyHost.collectAsStateWithLifecycle()
+    val port by viewModel.proxyPort.collectAsStateWithLifecycle()
+    var hostText by remember(host) { mutableStateOf(host) }
+    var portText by remember(port) { mutableStateOf(if (port > 0) port.toString() else "") }
+
+    val hasProxy = hostText.isNotBlank() && portText.toIntOrNull()?.let { it > 0 } == true
+
+    Card(
+        shape = AbsoluteSmoothCornerShape(20.dp, 60),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = if (hasProxy) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.Surface(
+                    shape = AbsoluteSmoothCornerShape(14.dp, 60),
+                    color = if (hasProxy) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.size(46.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Filled.Language,
+                            contentDescription = null,
+                            tint = if (hasProxy) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "SOCKS5 Proxy",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        if (hasProxy) "Configured: $hostText:$portText" else "Not configured",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (hasProxy) {
+                    androidx.compose.material3.Surface(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        shape = AbsoluteSmoothCornerShape(8.dp, 60)
+                    ) {
+                        Text(
+                            text = "Active",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                androidx.compose.material3.OutlinedTextField(
+                    value = hostText,
+                    onValueChange = {
+                        hostText = it
+                        viewModel.setProxyHost(it.trim())
+                    },
+                    label = { Text("Host") },
+                    placeholder = { Text("e.g. 1.2.3.4") },
+                    singleLine = true,
+                    shape = AbsoluteSmoothCornerShape(14.dp, 60),
+                    modifier = Modifier.weight(2f)
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = portText,
+                    onValueChange = {
+                        portText = it
+                        it.trim().toIntOrNull()?.let { p -> viewModel.setProxyPort(p) }
+                    },
+                    label = { Text("Port") },
+                    placeholder = { Text("1080") },
+                    singleLine = true,
+                    shape = AbsoluteSmoothCornerShape(14.dp, 60),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScreen(
@@ -2096,6 +2196,18 @@ private fun SettingsScreen(
                 iconContentColor = MaterialTheme.colorScheme.onErrorContainer,
                 onClick = { showClearDownloadsDialog = true }
             )
+
+            Spacer(Modifier.height(24.dp))
+            SectionTitle("Japan Proxy")
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Required to download region-locked games for the first time. " +
+                    "Enter a Japan SOCKS5 proxy address.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            ProxySettingsRow(viewModel = viewModel)
 
             Spacer(Modifier.height(24.dp))
             SectionTitle("Battery & Background")

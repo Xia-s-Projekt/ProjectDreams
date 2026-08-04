@@ -55,7 +55,7 @@ class App : Application() {
     }
 
     val storeRepository: StoreRepository by lazy {
-        StoreRepository(authRepository, playHttpClient)
+        StoreRepository(authRepository, playHttpClient, settingsRepository)
     }
 
     val downloadStateStore: DownloadStateStore by lazy {

@@ -138,6 +138,12 @@ class SettingsRepository(context: Context) {
     )
     val deleteAfterInstall: StateFlow<Boolean> = _deleteAfterInstall.asStateFlow()
 
+    private val _proxyHost = MutableStateFlow(prefs.getString(KEY_PROXY_HOST, "") ?: "")
+    val proxyHost: StateFlow<String> = _proxyHost.asStateFlow()
+
+    private val _proxyPort = MutableStateFlow(prefs.getInt(KEY_PROXY_PORT, 1080))
+    val proxyPort: StateFlow<Int> = _proxyPort.asStateFlow()
+
     private val _updateIntervalHours = MutableStateFlow(loadUpdateIntervalHours())
     val updateIntervalHours: StateFlow<Long> = _updateIntervalHours.asStateFlow()
 
@@ -182,6 +188,19 @@ class SettingsRepository(context: Context) {
         prefs.edit().putBoolean(KEY_DELETE_AFTER_INSTALL, value).apply()
     }
 
+    fun setProxyHost(value: String) {
+        _proxyHost.value = value
+        prefs.edit().putString(KEY_PROXY_HOST, value).apply()
+    }
+
+    fun setProxyPort(value: Int) {
+        _proxyPort.value = value
+        prefs.edit().putInt(KEY_PROXY_PORT, value).apply()
+    }
+
+    /** Whether a usable Japan proxy is configured. */
+    fun hasProxy(): Boolean = _proxyHost.value.isNotBlank() && _proxyPort.value > 0
+
     fun setUpdateIntervalHours(hours: Long) {
         val clamped = hours.coerceIn(MIN_INTERVAL_HOURS, MAX_INTERVAL_HOURS)
         _updateIntervalHours.value = clamped
@@ -212,6 +231,8 @@ class SettingsRepository(context: Context) {
         const val KEY_REGION = "region"
         private const val KEY_CONFIRM_INSTALL_METHOD = "confirm_install_method"
         private const val KEY_DELETE_AFTER_INSTALL = "delete_after_install"
+        private const val KEY_PROXY_HOST = "proxy_host"
+        private const val KEY_PROXY_PORT = "proxy_port"
         private const val KEY_UPDATE_INTERVAL_HOURS = "update_interval_hours"
         private const val KEY_UPDATE_INTERVAL_LEGACY = "update_interval"
 
